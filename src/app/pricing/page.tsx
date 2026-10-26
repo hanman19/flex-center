@@ -12,7 +12,18 @@ const PLANS = [
 ];
 
 export default function PricingPage() {
-  const [selected, setSelected] = useState("LITE");
+  const [selected, setSelected] = useState("VIP");
+  const [animating, setAnimating] = useState<string | null>(null);
+
+  const handleSelect = (id: string) => {
+    setAnimating(id);
+    setSelected(id);
+    setTimeout(()=>setAnimating(null), 400);
+    // 햅틱 느낌
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      (navigator as any).vibrate(30);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#fafaf8] text-[#111] font-sans">
@@ -30,7 +41,6 @@ export default function PricingPage() {
       </header>
 
       <main className="max-w-[1200px] mx-auto px-6 md:px-8">
-        {/* Hero */}
         <div className="pt-16 md:pt-24 pb-12">
           <div className="inline-flex items-center gap-2 text-[11px] tracking-widest border border-black/10 rounded-full px-3 py-1">
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
@@ -40,56 +50,92 @@ export default function PricingPage() {
           <p className="text-[15px] md:text-[17px] opacity-60 mt-5 max-w-[520px] leading-relaxed">합포장 3개, 바코드 라벨링, 박스+완충재+인쇄까지 모두 포함. 숨겨진 비용 없습니다.</p>
         </div>
 
-        {/* Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-[1px] bg-black/10 rounded-[24px] overflow-hidden p-[1px]">
-          {PLANS.map((plan)=>(
-            <div key={plan.id} className={`bg-white p-7 md:p-8 relative flex flex-col group hover:z-10 transition-all ${plan.popular ? 'md:-mt-2 md:mb-2 md:rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.12)] ring-1 ring-black/10 z-10' : ''}`}>
-              {plan.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] tracking-widest px-3 py-1 rounded-full font-semibold">MOST POPULAR</div>}
-              
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-[13px] tracking-widest">{plan.name}</span>
-                    {plan.badge && <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold tracking-widest ${plan.badge==='ORIGINAL' ? 'bg-blue-600 text-white' : 'bg-black text-white'}`}>{plan.badge}</span>}
+        {/* Plans Grid - Fixed black line */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-[1px] md:bg-transparent">
+          {PLANS.map((plan)=>{
+            const isSelected = selected === plan.id;
+            const isAnimating = animating === plan.id;
+            
+            return (
+              <div 
+                key={plan.id} 
+                onClick={()=>handleSelect(plan.id)}
+                className={`
+                  group relative bg-white p-7 md:p-8 rounded-[24px] md:rounded-[20px] flex flex-col cursor-pointer
+                  border transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]
+                  ${isSelected 
+                    ? 'border-black shadow-[0_0_0_1px_black,0_20px_60px_rgba(0,0,0,0.15)] scale-[1.02] z-10' 
+                    : 'border-black/10 hover:border-black/20 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:-translate-y-1'
+                  }
+                  ${plan.popular && !isSelected ? 'md:ring-1 md:ring-blue-600/20 md:shadow-[0_10px_40px_rgba(37,99,235,0.12)]' : ''}
+                  ${isAnimating ? 'scale-[0.98]' : ''}
+                `}
+              >
+                {/* MOST POPULAR Badge - Fixed position, no black line */}
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#2563eb] text-white text-[10px] tracking-widest px-3.5 py-1 rounded-full font-semibold shadow-[0_4px_12px_rgba(37,99,235,0.3)] z-20">
+                    MOST POPULAR
                   </div>
-                  <p className="text-[13px] opacity-40 mt-1">{plan.orders}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[11px] opacity-40">건당</p>
-                  <p className="text-[12px] font-semibold text-black/70">{plan.perOrder}</p>
-                </div>
-              </div>
+                )}
 
-              <div className="mt-8">
-                <p className="text-[32px] font-[700] tracking-tight leading-none">{plan.price}<span className="text-[14px] font-normal opacity-60 ml-1">원 / 월</span></p>
-                <div className="mt-3 inline-flex items-center gap-2 bg-black/[0.04] rounded-full px-3 py-1">
-                  <span className="text-[11px] font-medium">{plan.storage}</span>
-                  {plan.detail && <span className="text-[10px] opacity-40">· {plan.detail}</span>}
+                {/* Selection Indicator */}
+                <div className={`absolute top-5 right-5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? 'bg-black border-black scale-110' : 'border-black/15 bg-white group-hover:border-black/30'}`}>
+                  {isSelected && <span className="text-white text-[12px] font-bold">✓</span>}
                 </div>
-              </div>
 
-              <div className="mt-6 space-y-2.5">
-                <div className="flex items-center gap-2 text-[12px]"><span className="w-4 h-4 rounded-full bg-black/5 flex items-center justify-center text-[10px]">✓</span> 합포장 3개 무료</div>
-                <div className="flex items-center gap-2 text-[12px]"><span className="w-4 h-4 rounded-full bg-black/5 flex items-center justify-center text-[10px]">✓</span> 바코드 라벨링 무료</div>
-                <div className="flex items-center gap-2 text-[12px]"><span className="w-4 h-4 rounded-full bg-black/5 flex items-center justify-center text-[10px]">✓</span> 일반 포장 무료</div>
-              </div>
+                <div className="flex justify-between items-start pr-8">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-[13px] tracking-widest">{plan.name}</span>
+                      {plan.badge && <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold tracking-widest ${plan.badge==='ORIGINAL' ? 'bg-blue-600 text-white' : 'bg-black text-white'}`}>{plan.badge}</span>}
+                    </div>
+                    <p className="text-[13px] opacity-40 mt-1">{plan.orders}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] opacity-40">건당</p>
+                    <p className="text-[12px] font-semibold text-black/70">{plan.perOrder}</p>
+                  </div>
+                </div>
 
-              <button onClick={()=>setSelected(plan.id)} className={`mt-8 w-full rounded-full py-3.5 text-[13px] font-semibold transition-all ${selected===plan.id ? 'bg-black text-white shadow-lg' : 'bg-white border border-black/10 hover:bg-black hover:text-white'}`}>
-                {selected===plan.id ? '선택됨' : `${plan.name} 선택`}
-              </button>
-            </div>
-          ))}
+                <div className="mt-8">
+                  <p className={`text-[32px] font-[700] tracking-tight leading-none transition-transform duration-300 ${isAnimating ? 'scale-105' : ''} ${isSelected ? 'text-black' : ''}`}>
+                    {plan.price}<span className="text-[14px] font-normal opacity-60 ml-1">원 / 월</span>
+                  </p>
+                  <div className={`mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 transition-colors ${isSelected ? 'bg-black text-white' : 'bg-black/[0.04]'}`}>
+                    <span className="text-[11px] font-medium">{plan.storage}</span>
+                    {plan.detail && <span className={`text-[10px] ${isSelected ? 'opacity-60' : 'opacity-40'}`}>· {plan.detail}</span>}
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-2.5">
+                  <div className="flex items-center gap-2 text-[12px]"><span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] transition-colors ${isSelected ? 'bg-black text-white' : 'bg-black/5'}`}>✓</span> 합포장 3개 무료</div>
+                  <div className="flex items-center gap-2 text-[12px]"><span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] transition-colors ${isSelected ? 'bg-black text-white' : 'bg-black/5'}`}>✓</span> 바코드 라벨링 무료</div>
+                  <div className="flex items-center gap-2 text-[12px]"><span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] transition-colors ${isSelected ? 'bg-black text-white' : 'bg-black/5'}`}>✓</span> 일반 포장 무료</div>
+                </div>
+
+                <div className={`mt-8 w-full rounded-full py-3.5 text-[13px] font-semibold transition-all duration-300 text-center
+                  ${isSelected 
+                    ? 'bg-black text-white shadow-[0_8px_20px_rgba(0,0,0,0.2)]' 
+                    : 'bg-white border border-black/10 group-hover:bg-black group-hover:text-white group-hover:border-black'
+                  }
+                  ${isAnimating ? 'scale-95' : 'scale-100'}
+                `}>
+                  {isSelected ? '선택됨 ✓' : `${plan.name} 선택`}
+                </div>
+
+                {/* Subtle glow for selected */}
+                {isSelected && <div className="absolute inset-0 rounded-[24px] md:rounded-[20px] bg-gradient-to-b from-black/[0.02] to-transparent pointer-events-none" />}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Details - Beautiful minimal */}
+        {/* Details sections - keep simple */}
         <div className="mt-24 md:mt-32 grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-8 border-t border-black/5 pt-16">
-          
           <div className="md:col-span-5">
             <p className="text-[11px] tracking-widest opacity-30">STORAGE & FEES</p>
             <h2 className="text-[26px] md:text-[32px] font-semibold tracking-tight leading-tight mt-3">보관은 필요한 만큼,<br/>초과도 합리적으로.</h2>
-            <p className="text-[14px] opacity-60 mt-4 leading-relaxed max-w-[360px]">파렛트 1.1×1.1×1.8m 기준, 혼적 3개 허용. 60일 이상 장기 보관 시 50% 할증. 최소 보관료로 부담 없이 시작하세요.</p>
           </div>
-
           <div className="md:col-span-7">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {[
@@ -100,7 +146,7 @@ export default function PricingPage() {
                 {name:"PLATINUM", pallets:"파렛트 25개", over:"2만원 / 월", min:"최소 50만원"},
                 {name:"VIP", pallets:"파렛트 40개", over:"2만원 / 월", min:"최소 80만원"},
               ].map((s)=>(
-                <div key={s.name} className="bg-white border border-black/5 rounded-[16px] p-5">
+                <div key={s.name} className={`bg-white border rounded-[16px] p-5 transition-all ${selected===s.name ? 'border-black ring-1 ring-black' : 'border-black/5'}`}>
                   <p className="text-[11px] font-semibold tracking-widest opacity-40">{s.name}</p>
                   <p className="text-[13px] font-medium mt-2">{s.pallets}</p>
                   <p className="text-[12px] opacity-60 mt-1">{s.over}</p>
@@ -111,54 +157,27 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="mt-20 grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-8 border-t border-black/5 pt-16">
-          <div className="md:col-span-5">
-            <p className="text-[11px] tracking-widest opacity-30">EXTRA</p>
-            <h2 className="text-[26px] md:text-[32px] font-semibold tracking-tight leading-tight mt-3">필요할 때만 쓰는<br/>추가 옵션.</h2>
-          </div>
-          <div className="md:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white border border-black/5 rounded-[16px] p-6">
-              <h4 className="font-semibold text-[13px]">합포장 추가</h4>
-              <div className="mt-4 space-y-3">
-                <div className="flex justify-between text-[13px]"><span className="opacity-60">3개까지</span><span className="font-medium">무료</span></div>
-                <div className="flex justify-between text-[13px]"><span className="opacity-60">동종 4개부터</span><span className="font-medium">100원/개</span></div>
-                <div className="flex justify-between text-[13px]"><span className="opacity-60">이종 4개부터</span><span className="font-medium">200원/개</span></div>
-              </div>
-            </div>
-            <div className="bg-white border border-black/5 rounded-[16px] p-6">
-              <h4 className="font-semibold text-[13px]">특수 처리</h4>
-              <div className="mt-4 space-y-3">
-                <div className="flex justify-between text-[13px]"><span className="opacity-60">반품 재입고</span><span className="font-medium">500원/건</span></div>
-                <div className="flex justify-between text-[13px]"><span className="opacity-60">특수 포장</span><span className="font-medium">500원/건</span></div>
-                <div className="flex justify-between text-[13px]"><span className="opacity-60">택 제거</span><span className="font-medium">300원/건</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-20 border-t border-black/5 pt-16 pb-32">
+        <div className="mt-20 pb-32 border-t border-black/5 pt-16">
           <div className="flex flex-col md:flex-row gap-8 md:items-end justify-between">
             <div>
               <p className="text-[11px] tracking-widest opacity-30">NIGHT & WEEKEND</p>
               <h2 className="text-[22px] md:text-[26px] font-semibold tracking-tight mt-3">야간·주말, 정해진 기준대로만.</h2>
-              <p className="text-[13px] opacity-50 mt-2">근로기준법 제56조 기준. 투명하게 미리 알려드립니다.</p>
             </div>
             <div className="flex gap-2">
               <span className="text-[11px] px-3 py-1.5 rounded-full bg-black text-white">평일 주간 09-18시 포함</span>
               <span className="text-[11px] px-3 py-1.5 rounded-full border border-black/10">연장·야간·휴일 +300~600원</span>
             </div>
           </div>
-
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-6 gap-[1px] bg-black/10 rounded-[16px] overflow-hidden p-[1px]">
+          <div className="mt-8 grid grid-cols-3 md:grid-cols-6 gap-[1px] bg-black/10 rounded-[16px] overflow-hidden p-[1px]">
             {[
-              {k:"평일 주간", t:"09-18", p:"포함", c:"bg-white"},
-              {k:"평일 연장", t:"18-22", p:"+300원", c:"bg-white"},
-              {k:"야간", t:"22-06", p:"+300원", c:"bg-white"},
-              {k:"연장+야간", t:"22-24", p:"+600원", c:"bg-[#FFFBEB]"},
-              {k:"주말 주간", t:"09-18", p:"+300원", c:"bg-white"},
-              {k:"주말 야간", t:"22-06", p:"+600원", c:"bg-[#FFFBEB]"},
+              {k:"평일 주간", t:"09-18", p:"포함"},
+              {k:"평일 연장", t:"18-22", p:"+300원"},
+              {k:"야간", t:"22-06", p:"+300원"},
+              {k:"연장+야간", t:"22-24", p:"+600원"},
+              {k:"주말 주간", t:"09-18", p:"+300원"},
+              {k:"주말 야간", t:"22-06", p:"+600원"},
             ].map((i)=>(
-              <div key={i.k} className={`${i.c} p-4 text-center`}>
+              <div key={i.k} className="bg-white p-4 text-center">
                 <p className="text-[11px] font-medium">{i.k}</p>
                 <p className="text-[11px] opacity-40 mt-1">{i.t}</p>
                 <p className={`text-[13px] font-semibold mt-2 ${i.p==='포함' ? 'text-green-600' : 'text-orange-600'}`}>{i.p}</p>
@@ -168,18 +187,24 @@ export default function PricingPage() {
         </div>
 
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20 w-[92%] max-w-[560px]">
-          <div className="bg-black text-white rounded-full p-2 flex items-center justify-between shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+          <div className="bg-black text-white rounded-full p-2 flex items-center justify-between shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-xl animate-[slideUp_0.5s_cubic-bezier(0.16,1,0.3,1)]">
             <div className="pl-6">
-              <p className="text-[12px] opacity-50">선택한 플랜</p>
-              <p className="text-[15px] font-semibold -mt-0.5">{selected} · {PLANS.find(p=>p.id===selected)?.price}원</p>
+              <p className="text-[11px] opacity-50">선택한 플랜</p>
+              <p className="text-[15px] font-semibold -mt-0.5 transition-all">{selected} · {PLANS.find(p=>p.id===selected)?.price}원</p>
             </div>
-            <Link href={`/onboarding?plan=${selected}`} className="bg-white text-black px-6 py-3 rounded-full text-[13px] font-semibold hover:bg-zinc-100 transition">
+            <Link href={`/onboarding?plan=${selected}`} className="bg-white text-black px-6 py-3 rounded-full text-[13px] font-semibold hover:bg-zinc-100 hover:scale-105 active:scale-95 transition-all">
               시작하기 →
             </Link>
           </div>
         </div>
-
       </main>
+
+      <style jsx>{`
+        @keyframes slideUp {
+          from { transform: translate(-50%, 100%); opacity: 0; }
+          to { transform: translate(-50%, 0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
