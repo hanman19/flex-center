@@ -11,7 +11,7 @@ export default function OnboardingPage() {
   const [user, setUser] = useState<any>(null);
   const [plan, setPlan] = useState("LITE");
   const [form, setForm] = useState({
-    bizNo:"", ceoName:"", companyName:"", address:"", phone:"", email:"", taxEmail:"",
+    bizNo:"", ceoName:"", companyName:"", address:"", phone:"", contactEmail:"", taxEmail:"",
     skuCount:"", monthlyOrders:"", storageType:"", category:"", special:""
   });
   const [saving, setSaving] = useState(false);
@@ -28,12 +28,23 @@ export default function OnboardingPage() {
       user_id: user?.id,
       email: user?.email,
       plan: plan,
-      ...form,
+      biz_no: form.bizNo,
+      company_name: form.companyName,
+      ceo_name: form.ceoName,
+      address: form.address,
+      phone: form.phone,
+      contact_email: form.contactEmail,
+      tax_email: form.taxEmail,
+      sku_count: form.skuCount,
+      monthly_orders: form.monthlyOrders,
+      storage_type: form.storageType,
+      category: form.category,
+      special: form.special,
       created_at: new Date().toISOString()
     };
     const { error } = await supabase.from("seller_profiles").insert(payload);
     if (error) {
-      alert("저장 실패: "+error.message+"\n\nSupabase에 seller_profiles 테이블을 만들어야 합니다. SQL을 드릴게요!");
+      alert("저장 실패: "+error.message+"\n\nSupabase에 seller_profiles 테이블을 만들어야 합니다. SQL을 실행했는지 확인하세요!");
       console.log(error);
     } else {
       alert("사업자 정보 저장 완료! 이제 대시보드로 이동합니다.");
@@ -86,7 +97,7 @@ export default function OnboardingPage() {
                 <div><label className="text-[11px] opacity-50">사업장 주소 *</label><input value={form.address} onChange={e=>setForm({...form,address:e.target.value})} placeholder="경기도 김포시..." className="w-full mt-1 border rounded-xl px-4 py-3 text-[13px]"/></div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="text-[11px] opacity-50">연락처 *</label><input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} placeholder="010-1234-5678" className="w-full mt-1 border rounded-xl px-4 py-3 text-[13px]"/></div>
-                  <div><label className="text-[11px] opacity-50">이메일 *</label><input value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="order@..." className="w-full mt-1 border rounded-xl px-4 py-3 text-[13px]"/></div>
+                  <div><label className="text-[11px] opacity-50">연락용 이메일 *</label><input value={form.contactEmail} onChange={e=>setForm({...form,contactEmail:e.target.value})} placeholder="order@..." className="w-full mt-1 border rounded-xl px-4 py-3 text-[13px]"/></div>
                 </div>
                 <div><label className="text-[11px] opacity-50">세금계산서 발행 이메일</label><input value={form.taxEmail} onChange={e=>setForm({...form,taxEmail:e.target.value})} placeholder="tax@..." className="w-full mt-1 border rounded-xl px-4 py-3 text-[13px]"/></div>
               </div>
@@ -107,7 +118,7 @@ export default function OnboardingPage() {
 
             <div className="bg-black text-white rounded-[20px] p-7">
               <h3 className="font-bold text-[14px]">선택한 요금제: {plan}</h3>
-              <p className="text-[12px] opacity-60 mt-2">다음 단계에서 결제 및 큐브(파렛트) 배정, 랙 로케이션 설정이 진행됩니다.</p>
+              <p className="text-[12px] opacity-60 mt-2">다음 단계에서 결제 및 파렛트 배정, 랙 로케이션 설정이 진행됩니다.</p>
               <button onClick={submit} disabled={saving} className="w-full mt-6 bg-white text-black rounded-full py-4 font-black text-[14px] disabled:opacity-50">
                 {saving ? "저장 중..." : "사업자 정보 저장하고 계속 →"}
               </button>
