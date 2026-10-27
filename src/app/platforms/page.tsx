@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import TopNav from "@/components/TopNav";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -157,3 +157,4 @@ export default function PlatformsPage() {
     </div>
   );
 }
+
