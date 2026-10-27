@@ -14,11 +14,15 @@ const STAFF_EMAILS = ["staff@flexcenter.kr"];
 
 type Role = "seller" | "staff" | "admin" | null;
 
+const INACTIVITY_LIMIT = 60 * 60 * 1000; // 60분
+const ABSOLUTE_LIMIT = 3 * 60 * 60 * 1000; // 3시간
+
 export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [role, setRole] = useState<Role>(null);
+  const [remaining, setRemaining] = useState<number>(INACTIVITY_LIMIT);
 
   useEffect(() => {
     const init = async () => {
@@ -33,16 +37,71 @@ export default function TopNav() {
     init();
   }, []);
 
+  // 자동 로그아웃 로직
+  useEffect(() => {
+    if (!email) return; // 로그인 안 했으면 체크 안 함
+
+    const loginTime = Number(localStorage.getItem("flex_login_time") || Date.now());
+    if (!localStorage.getItem("flex_login_time")) localStorage.setItem("flex_login_time", String(Date.now()));
+    
+    const updateActivity = () => {
+      localStorage.setItem("flex_last_activity", String(Date.now()));
+      setRemaining(INACTIVITY_LIMIT);
+    };
+
+    // 마우스, 키보드, 클릭하면 활동 시간 갱신
+    const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+    events.forEach(ev => window.addEventListener(ev, updateActivity));
+
+    // 1초마다 체크
+    const interval = setInterval(async () => {
+      const lastActivity = Number(localStorage.getItem("flex_last_activity") || Date.now());
+      const now = Date.now();
+      const inactive = now - lastActivity;
+      const absolute = now - loginTime;
+      
+      setRemaining(Math.max(0, INACTIVITY_LIMIT - inactive));
+
+      if (inactive >= INACTIVITY_LIMIT) {
+        alert("60분 동안 활동이 없어 자동 로그아웃됩니다!");
+        await supabase.auth.signOut();
+        localStorage.removeItem("flex_login_time");
+        localStorage.removeItem("flex_last_activity");
+        router.push("/login");
+        clearInterval(interval);
+      } else if (absolute >= ABSOLUTE_LIMIT) {
+        alert("3시간이 지나 자동 로그아웃됩니다! 다시 로그인해주세요!");
+        await supabase.auth.signOut();
+        localStorage.removeItem("flex_login_time");
+        localStorage.removeItem("flex_last_activity");
+        router.push("/login");
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    // 초기 활동 시간 설정
+    updateActivity();
+
+    return () => {
+      events.forEach(ev => window.removeEventListener(ev, updateActivity));
+      clearInterval(interval);
+    };
+  }, [email, router]);
+
   const isAdmin = role === "admin";
   const isStaff = role === "staff";
   const isSeller = role === "seller";
   const isLoggedIn = !!email;
 
-  // 로그인 안 해도 메뉴는 항상 보이게! 로그인 안 하면 대시보드만 로그인 페이지로
   const showSellerMenus = !isLoggedIn || isAdmin || isSeller;
   const showWorkerWMS = isLoggedIn && (isAdmin || isStaff);
-
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
+
+  const formatRemaining = (ms: number) => {
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    return `${m}:${String(s).padStart(2,"0")}`;
+  };
 
   return (
     <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-black/5">
@@ -69,9 +128,14 @@ export default function TopNav() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {email && <span className="text-[10px] opacity-40 hidden md:block">{email} · {role}</span>}
+          {email && (
+            <>
+              <span className="text-[10px] opacity-40 hidden md:block">{email} · {role} · 자동 로그아웃 {formatRemaining(remaining)} 남음</span>
+              <span className="text-[10px] opacity-40 md:hidden">{formatRemaining(remaining)}</span>
+            </>
+          )}
           {isLoggedIn ? (
-            <button onClick={async()=>{await supabase.auth.signOut(); router.push("/login");}} className="text-[11px] px-3 py-1.5 rounded-full border border-black/10 hover:bg-black hover:text-white transition">로그아웃</button>
+            <button onClick={async()=>{await supabase.auth.signOut(); localStorage.removeItem("flex_login_time"); localStorage.removeItem("flex_last_activity"); router.push("/login");}} className="text-[11px] px-3 py-1.5 rounded-full border border-black/10 hover:bg-black hover:text-white transition">로그아웃</button>
           ) : (
             <Link href="/login" className="text-[11px] px-3 py-1.5 rounded-full bg-black text-white">로그인</Link>
           )}
