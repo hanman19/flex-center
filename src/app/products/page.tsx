@@ -1,4 +1,5 @@
 "use client";
+import TopNav from "@/components/TopNav";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
@@ -85,6 +86,7 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-[#fafaf8]">
+      <TopNav />
       <header className="border-b border-black/5 bg-white/80 backdrop-blur-xl sticky top-0 z-20">
         <div className="max-w-[1200px] mx-auto px-6 h-[64px] flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2"><div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center font-black text-[12px]">F</div><span className="font-bold">FLEX CENTER</span><span className="text-[11px] opacity-40 ml-2">상품 마스터</span><span className="ml-2 bg-green-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">PHASE 1</span></Link>

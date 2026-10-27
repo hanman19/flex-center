@@ -1,4 +1,5 @@
 "use client";
+import TopNav from "@/components/TopNav";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
@@ -62,7 +63,8 @@ export default function PlatformsPage() {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">로딩 중...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center">
+      <TopNav />로딩 중...</div>;
 
   if (!session) {
     return (

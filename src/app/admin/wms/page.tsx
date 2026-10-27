@@ -1,4 +1,5 @@
 "use client";
+import TopNav from "@/components/TopNav";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
@@ -225,7 +226,8 @@ export default function WMSProPhase3Page() {
   const total = expandedOrders.length;
   const done = completed.length;
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-[13px]">PHASE 3 로딩 - 샘플 자동 추가 규칙 적용중...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-[13px]">
+      <TopNav />PHASE 3 로딩 - 샘플 자동 추가 규칙 적용중...</div>;
   if (session && ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(session.user.email)) {
     // allow anyway for demo
   }
