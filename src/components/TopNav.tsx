@@ -2,7 +2,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
+);
 
 const ADMIN_EMAILS = ["phankyu@gmail.com", "phankyu@flexcenter.kr"];
 const STAFF_EMAILS = ["staff@flexcenter.kr"];
@@ -38,10 +43,8 @@ export default function TopNav() {
 
   const isAdmin = role === "admin";
   const isStaff = role === "staff";
-
   const showSellerMenus = isAdmin || role === "seller";
   const showWorkerWMS = isAdmin || isStaff;
-
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
 
   return (
