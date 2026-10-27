@@ -28,7 +28,6 @@ export default function DashboardPage() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">로딩 중...</div>;
 
-  // 로그인 안 되어 있음 -> 로그인 페이지 안내
   if (!session) {
     return (
       <div className="min-h-screen bg-[#fafaf8] flex items-center justify-center p-6">
@@ -45,20 +44,56 @@ export default function DashboardPage() {
     );
   }
 
-  // 프로필 없음 -> onboarding 안내
+  // ★ 관리자(phankyu@gmail.com)는 사업자 인증 없이도 접근 가능!
+  const isAdmin = session.user.email === "phankyu@gmail.com";
+
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen bg-[#fafaf8] p-6">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-[24px] font-bold">관리자 전용 대시보드</h1>
+              <p className="text-[12px] opacity-60 mt-1">phankyu@gmail.com 관리자님 환영합니다 👑</p>
+            </div>
+            <div className="flex gap-2">
+              <Link href="/" className="text-[12px] px-4 py-2 rounded-full border">홈</Link>
+              <Link href="/admin" className="text-[12px] px-5 py-2 rounded-full bg-amber-500 text-black font-bold">ADMIN 관리 페이지 →</Link>
+              <button onClick={async ()=>{await supabase.auth.signOut(); location.href="/";}} className="text-[12px] px-4 py-2 rounded-full bg-black text-white">로그아웃</button>
+            </div>
+          </div>
+          <div className="mt-8 grid md:grid-cols-2 gap-4">
+            <Link href="/admin" className="bg-black text-white border border-black/5 rounded-[16px] p-8 hover:bg-black/90">
+              <p className="text-[18px] font-bold">사업자 승인 관리 →</p>
+              <p className="text-[12px] opacity-60 mt-2">PENDING인 사업자들을 승인/거부할 수 있습니다</p>
+            </Link>
+            <div className="bg-white border border-black/5 rounded-[16px] p-8">
+              <p className="text-[14px] font-bold">MY STATS (관리자)</p>
+              <p className="text-[12px] opacity-60 mt-2">관리자는 사업자 인증 없이 모든 재고를 볼 수 있습니다</p>
+              <p className="text-[11px] opacity-40 mt-4">관리자 계정은 seller_profiles 없이도 접근 가능</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!profile) {
     return (
       <div className="min-h-screen bg-[#fafaf8] flex items-center justify-center p-6">
         <div className="bg-white border border-black/5 rounded-[24px] p-8 max-w-[440px] w-full text-center">
           <h1 className="text-[22px] font-bold">사업자 인증이 필요합니다</h1>
           <p className="text-[13px] opacity-60 mt-2">회원전용 이용을 위해 사업자 정보를 입력하세요</p>
-          <Link href="/onboarding" className="mt-8 block w-full bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">사업자 인증하러 가기 →</Link>
+          <p className="text-[11px] opacity-40 mt-2">현재 로그인: {session.user.email}</p>
+          <div className="mt-8 space-y-3">
+            <Link href="/onboarding" className="block w-full bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">사업자 인증하러 가기 →</Link>
+            <button onClick={async ()=>{await supabase.auth.signOut(); location.href="/";}} className="block w-full border border-black/10 rounded-full py-3.5 text-[13px]">로그아웃</button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // pending 상태
   if (profile.status === "pending") {
     return (
       <div className="min-h-screen bg-[#fafaf8] flex items-center justify-center p-6">
@@ -75,13 +110,11 @@ export default function DashboardPage() {
             <Link href="/" className="flex-1 border border-black/10 rounded-full py-3 text-[12px]">홈으로</Link>
             <button onClick={async ()=>{await supabase.auth.signOut(); location.href="/";}} className="flex-1 bg-black text-white rounded-full py-3 text-[12px]">로그아웃</button>
           </div>
-          <p className="text-[11px] opacity-30 mt-4">문의: phankyu@gmail.com</p>
         </div>
       </div>
     );
   }
 
-  // approved - 실제 재고 관리 페이지
   if (profile.status === "approved") {
     return (
       <div className="min-h-screen bg-[#fafaf8] p-6">
@@ -99,20 +132,17 @@ export default function DashboardPage() {
           <div className="mt-8 bg-white border border-black/5 rounded-[16px] p-8">
             <p className="text-[14px] font-bold">🎉 승인이 완료되었습니다!</p>
             <p className="text-[13px] opacity-60 mt-2">이제 MY STATS에 상품을 등록하고, 입고 요청을 할 수 있습니다.</p>
-            {/* 기존 MY STATS 로직 여기에... */}
           </div>
         </div>
       </div>
     );
   }
 
-  // rejected
   return (
     <div className="min-h-screen bg-[#fafaf8] flex items-center justify-center p-6">
       <div className="bg-white border border-red-200 rounded-[24px] p-8 max-w-[440px] w-full text-center">
         <h1 className="text-[22px] font-bold text-red-600">승인이 거부되었습니다</h1>
-        <p className="text-[13px] opacity-60 mt-2">서류가 불일치하거나 사업자 정보가 확인되지 않았습니다.<br/>관리자에게 문의하세요.</p>
-        <p className="text-[11px] opacity-40 mt-4">phankyu@gmail.com</p>
+        <p className="text-[13px] opacity-60 mt-2">문의: phankyu@gmail.com</p>
       </div>
     </div>
   );
