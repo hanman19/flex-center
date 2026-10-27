@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "./supabase";
 
 const ADMIN_EMAILS = ["phankyu@gmail.com", "phankyu@flexcenter.kr"];
 const STAFF_EMAILS = ["staff@flexcenter.kr"];

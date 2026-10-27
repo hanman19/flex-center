@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../lib/supabase";
 
 const ADMIN_EMAILS = ["phankyu@gmail.com", "phankyu@flexcenter.kr"];
 const STAFF_EMAILS = ["staff@flexcenter.kr"];
