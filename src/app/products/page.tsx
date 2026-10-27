@@ -21,8 +21,6 @@ type Product = {
   price: number;
   stock: number;
   location: string;
-  image?: string;
-  seller_id?: string;
 };
 
 type Bundle = {
@@ -48,14 +46,12 @@ export default function ProductsPage() {
   ]);
   const [tab, setTab] = useState<"list" | "add" | "bundle" | "upload">("list");
   const [form, setForm] = useState<Partial<Product>>({ sku: "", barcode: "", product_name: "", category: "전자기기", weight: 0.15, width: 10, height: 8, depth: 4, price: 0, stock: 0, location: "" });
-  const [bundleForm, setBundleForm] = useState({ bundle_sku: "", bundle_name: "", price: 0, components: [] as any[] });
+  const [bundleForm, setBundleForm] = useState({ bundle_sku: "", bundle_name: "", price: 0 });
   const [selectedSkus, setSelectedSkus] = useState<{ sku: string; qty: number }[]>([]);
-  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     const load = async () => {
       const { data: { session: s } } = await supabase.auth.getSession();
-      setSession(s);
       try {
         const { data } = await supabase.from("products").select("*").eq("seller_id", s?.user?.id);
         if (data && data.length > 0) setProducts(data);
@@ -82,16 +78,16 @@ export default function ProductsPage() {
     });
     const newBundle: Bundle = { id: Date.now().toString(), bundle_sku: bundleForm.bundle_sku, bundle_name: bundleForm.bundle_name, components, price: bundleForm.price };
     setBundles([...bundles, newBundle]);
-    setBundleForm({ bundle_sku: "", bundle_name: "", price: 0, components: [] });
+    setBundleForm({ bundle_sku: "", bundle_name: "", price: 0 });
     setSelectedSkus([]);
-    alert(`세트 상품 생성 완료! ${newBundle.bundle_name}\n구성: ${components.map(c=>`${c.product_name} x${c.qty}`).join(", ")}\nWMS에서 세트 주문 들어오면 자동으로 구성품 피킹!`);
+    alert(`세트 상품 생성 완료! ${newBundle.bundle_name}\n구성: ${components.map(c=>`${c.product_name} x${c.qty}`).join(", ")}`);
   };
 
   return (
     <div className="min-h-screen bg-[#fafaf8]">
       <header className="border-b border-black/5 bg-white/80 backdrop-blur-xl sticky top-0 z-20">
         <div className="max-w-[1200px] mx-auto px-6 h-[64px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2"><div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center font-black text-[12px]">F</div><span className="font-bold">FLEX CENTER</span><span className="text-[11px] opacity-40 ml-2">상품 마스터 - 기초 공사</span><span className="ml-2 bg-green-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">PHASE 1</span></Link>
+          <Link href="/" className="flex items-center gap-2"><div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center font-black text-[12px]">F</div><span className="font-bold">FLEX CENTER</span><span className="text-[11px] opacity-40 ml-2">상품 마스터</span><span className="ml-2 bg-green-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">PHASE 1</span></Link>
           <div className="flex gap-2"><Link href="/wms" className="text-[12px] px-4 py-2 rounded-full border">내 창고 WMS</Link><Link href="/admin/wms" className="text-[12px] px-4 py-2 rounded-full bg-black text-white">작업자 WMS Pro</Link><Link href="/orders" className="text-[12px] px-4 py-2 rounded-full border">주문관리</Link></div>
         </div>
       </header>
@@ -127,7 +123,6 @@ export default function ProductsPage() {
                 ))}
               </tbody>
             </table>
-            <div className="px-6 py-4 bg-[#fafaf8] text-[11px] opacity-60"><p>💡 <b>이 정보가 기초 공사!</b> 이 정보로: WMS에서 박스 추천 ({`무게+크기로 계산`}), 바코드 스캔 (바코드로 스캔), 선반 피킹 (선반 위치로 피킹), 샘플 증정 (상품 기반 룰), 세트 상품 (상품 묶기), 플랫폼 업로드 (상품 정보로 업로드)까지 다 됨!</p></div>
           </div>
         )}
 
@@ -155,7 +150,6 @@ export default function ProductsPage() {
                   <div><label className="text-[11px] font-bold opacity-60">재고 (개)</label><input type="number" value={form.stock} onChange={e=>setForm({...form, stock: parseInt(e.target.value) || 0})} className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" /></div>
                   <div><label className="text-[11px] font-bold opacity-60">선반 위치 - WMS 피킹 위치</label><input value={form.location} onChange={e=>setForm({...form, location: e.target.value.toUpperCase()})} placeholder="예: A-01-02" className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px] font-mono" /></div>
                 </div>
-                <div className="bg-[#fafaf8] rounded-[8px] p-3 text-[11px] opacity-60"><p>💡 <b>이 정보로:</b> 박스 추천 (무게+크기), 바코드 스캔 (바코드), 피킹 위치 (선반), 재고 관리 (재고), 샘플/세트 (SKU) 다 됨!</p></div>
               </div>
             </div>
             <div className="mt-6 flex gap-2"><button onClick={handleAddProduct} className="bg-black text-white px-8 py-3 rounded-full text-[13px] font-bold">상품 등록 - 기초 공사 완료!</button><button onClick={()=>setTab("list")} className="border border-black/10 px-6 py-3 rounded-full text-[13px]">취소</button></div>
@@ -166,7 +160,6 @@ export default function ProductsPage() {
           <div className="mt-6 grid md:grid-cols-2 gap-6">
             <div className="bg-white border border-black/5 rounded-[16px] p-6">
               <h3 className="font-bold text-[14px]">세트 상품 만들기 - 여러 상품을 1개로 패키지화! (사방넷 기능!)</h3>
-              <p className="text-[11px] opacity-50 mt-1">예: 이어폰 + 케이스 = 세트 상품! K-pop 앨범 + 포토카드 + 포스터 = 세트!</p>
               <div className="mt-4 space-y-3">
                 <input value={bundleForm.bundle_sku} onChange={e=>setBundleForm({...bundleForm, bundle_sku: e.target.value.toUpperCase()})} placeholder="세트 SKU 예: SET-001" className="w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px] font-mono" />
                 <input value={bundleForm.bundle_name} onChange={e=>setBundleForm({...bundleForm, bundle_name: e.target.value})} placeholder="세트명 예: 이어폰 + 케이스 세트" className="w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" />
@@ -197,7 +190,7 @@ export default function ProductsPage() {
               <h3 className="font-bold text-[14px]">내 세트 상품 목록 - WMS에서 자동 피킹!</h3>
               <div className="mt-4 space-y-3">
                 {bundles.map(b => (
-                  <div key={b.id} className="bg-white text-black rounded-[12px] p-4"><p className="font-mono font-bold text-[11px] bg-black text-white px-2 py-0.5 rounded-full inline-block">{b.bundle_sku}</p><p className="font-bold text-[13px] mt-2">{b.bundle_name}</p><p className="text-[11px] opacity-60 mt-1">구성: {b.components.map(c=>`${c.product_name} x${c.qty}`).join(" + ")}</p><p className="font-bold text-[12px] mt-2">{b.price.toLocaleString()}원</p><p className="text-[10px] opacity-50 mt-1">WMS에서 이 세트 주문 들어오면 구성품 자동으로 피킹 리스트에 추가!</p></div>
+                  <div key={b.id} className="bg-white text-black rounded-[12px] p-4"><p className="font-mono font-bold text-[11px] bg-black text-white px-2 py-0.5 rounded-full inline-block">{b.bundle_sku}</p><p className="font-bold text-[13px] mt-2">{b.bundle_name}</p><p className="text-[11px] opacity-60 mt-1">구성: {b.components.map(c=>`${c.product_name} x${c.qty}`).join(" + ")}</p><p className="font-bold text-[12px] mt-2">{b.price.toLocaleString()}원</p></div>
                 ))}
               </div>
             </div>
@@ -209,41 +202,12 @@ export default function ProductsPage() {
             <h3 className="font-bold text-[16px]">플랫폼에 상품 업로드 - 사방넷 기능! (준비중)</h3>
             <p className="text-[12px] opacity-60 mt-2">내 상품을 네이버, 쿠팡, 11번가에 한 번에 등록! 사방넷처럼!</p>
             <div className="mt-6 grid md:grid-cols-3 gap-4">
-              <div className="border border-green-200 bg-green-50 rounded-[12px] p-4"><p className="font-bold text-[13px] text-green-800">네이버 스마트스토어</p><p className="text-[11px] text-green-700 mt-2">카테고리, 원산지, 제조사, 옵션 필요<br/>API: POST /v2/products</p><button className="mt-3 bg-green-600 text-white px-4 py-2 rounded-full text-[11px] font-bold w-full">네이버에 업로드 (준비중)</button></div>
-              <div className="border border-red-200 bg-red-50 rounded-[12px] p-4"><p className="font-bold text-[13px] text-red-800">쿠팡 WING</p><p className="text-[11px] text-red-700 mt-2">카테고리, 브랜드, 키워드, 배송 템플릿 필요<br/>API: POST /v2/providers/openapi/products</p><button className="mt-3 bg-red-600 text-white px-4 py-2 rounded-full text-[11px] font-bold w-full">쿠팡에 업로드 (준비중)</button></div>
-              <div className="border border-blue-200 bg-blue-50 rounded-[12px] p-4"><p className="font-bold text-[13px] text-blue-800">11번가</p><p className="text-[11px] text-blue-700 mt-2">카테고리, 배송비 템플릿 필요<br/>API: 상품 등록</p><button className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-full text-[11px] font-bold w-full">11번가에 업로드 (준비중)</button></div>
+              <div className="border border-green-200 bg-green-50 rounded-[12px] p-4"><p className="font-bold text-[13px] text-green-800">네이버 스마트스토어</p><button className="mt-3 bg-green-600 text-white px-4 py-2 rounded-full text-[11px] font-bold w-full">네이버에 업로드 (준비중)</button></div>
+              <div className="border border-red-200 bg-red-50 rounded-[12px] p-4"><p className="font-bold text-[13px] text-red-800">쿠팡 WING</p><button className="mt-3 bg-red-600 text-white px-4 py-2 rounded-full text-[11px] font-bold w-full">쿠팡에 업로드 (준비중)</button></div>
+              <div className="border border-blue-200 bg-blue-50 rounded-[12px] p-4"><p className="font-bold text-[13px] text-blue-800">11번가</p><button className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-full text-[11px] font-bold w-full">11번가에 업로드 (준비중)</button></div>
             </div>
-            <div className="mt-6 bg-black text-white rounded-[12px] p-4"><p className="font-bold text-[12px]">사방넷처럼 일괄 업로드!</p><p className="text-[11px] opacity-60 mt-1">내 상품 10개 선택 → 네이버, 쿠팡, 11번가 체크 → 일괄 업로드 버튼 → 3개 플랫폼에 한 번에 등록! 재고도 자동 연동!</p><p className="text-[10px] opacity-40 mt-2">* 실제 업로드는 네이버, 쿠팡 API 계약 후 가능! 지금은 상품 마스터부터 완성!</p></div>
           </div>
         )}
-
-        <div className="mt-8 bg-black text-white rounded-[16px] p-6">
-          <h3 className="font-bold text-[14px]">Supabase products 테이블 만들기 (SQL)</h3>
-          <div className="mt-3 bg-white/10 rounded-[8px] p-3 font-mono text-[11px] overflow-auto">
-            <p>create table products (</p>
-            <p className="ml-4">id uuid primary key default gen_random_uuid(),</p>
-            <p className="ml-4">seller_id uuid references auth.users(id),</p>
-            <p className="ml-4">sku text unique not null,</p>
-            <p className="ml-4">barcode text,</p>
-            <p className="ml-4">product_name text not null,</p>
-            <p className="ml-4">category text,</p>
-            <p className="ml-4">weight numeric,</p>
-            <p className="ml-4">width int, height int, depth int,</p>
-            <p className="ml-4">price int, stock int,</p>
-            <p className="ml-4">location text,</p>
-            <p className="ml-4">image_url text,</p>
-            <p className="ml-4">created_at timestamp default now()</p>
-            <p>);</p>
-            <p className="mt-2">create table product_bundles (</p>
-            <p className="ml-4">id uuid primary key default gen_random_uuid(),</p>
-            <p className="ml-4">seller_id uuid,</p>
-            <p className="ml-4">bundle_sku text unique,</p>
-            <p className="ml-4">bundle_name text,</p>
-            <p className="ml-4">components jsonb,</p>
-            <p className="ml-4">price int</p>
-            <p>);</p>
-          </div>
-        </div>
       </main>
     </div>
   );
