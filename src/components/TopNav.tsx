@@ -6,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "placeholder-key"
 );
 
 const ADMIN_EMAILS = ["phankyu@gmail.com", "phankyu@flexcenter.kr"];
@@ -19,32 +19,29 @@ export default function TopNav() {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [role, setRole] = useState<Role>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      if (!user) return;
       const e = (user.email || "").toLowerCase();
       setEmail(e);
       if (ADMIN_EMAILS.includes(e)) setRole("admin");
       else if (STAFF_EMAILS.includes(e)) setRole("staff");
       else setRole("seller");
-      setLoading(false);
     };
     init();
   }, []);
 
-  if (loading) return null;
-  if (!email) return null;
-
   const isAdmin = role === "admin";
   const isStaff = role === "staff";
-  const showSellerMenus = isAdmin || role === "seller";
-  const showWorkerWMS = isAdmin || isStaff;
+  const isSeller = role === "seller";
+  const isLoggedIn = !!email;
+
+  // 로그인 안 해도 메뉴는 항상 보이게! 로그인 안 하면 대시보드만 로그인 페이지로
+  const showSellerMenus = !isLoggedIn || isAdmin || isSeller;
+  const showWorkerWMS = isLoggedIn && (isAdmin || isStaff);
+
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
 
   return (
@@ -72,8 +69,12 @@ export default function TopNav() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] opacity-40 hidden md:block">{email} · {role}</span>
-          <button onClick={async()=>{await supabase.auth.signOut(); router.push("/login");}} className="text-[11px] px-3 py-1.5 rounded-full border border-black/10 hover:bg-black hover:text-white transition">로그아웃</button>
+          {email && <span className="text-[10px] opacity-40 hidden md:block">{email} · {role}</span>}
+          {isLoggedIn ? (
+            <button onClick={async()=>{await supabase.auth.signOut(); router.push("/login");}} className="text-[11px] px-3 py-1.5 rounded-full border border-black/10 hover:bg-black hover:text-white transition">로그아웃</button>
+          ) : (
+            <Link href="/login" className="text-[11px] px-3 py-1.5 rounded-full bg-black text-white">로그인</Link>
+          )}
         </div>
       </div>
     </div>
