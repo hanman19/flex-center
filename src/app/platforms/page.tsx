@@ -39,12 +39,10 @@ export default function PlatformsPage() {
 
   const handleConnect = async (platformId: string) => {
     if (!session) return alert("로그인 필요!");
-    // 필수 필드 체크
     const platform = PLATFORMS.find(p=>p.id===platformId);
     const missing = platform?.fields.filter(f=>!formData[f]);
     if (missing && missing.length>0) return alert(`${missing.join(", ")}를 입력하세요!`);
 
-    // 저장
     const { error } = await supabase.from("seller_platforms").upsert({
       user_id: session.user.id,
       platform: platformId,
@@ -59,7 +57,6 @@ export default function PlatformsPage() {
       alert(`${platform?.name} 연동 완료! (테스트 모드)`);
       setSelected(null);
       setFormData({});
-      // 다시 로드
       const { data } = await supabase.from("seller_platforms").select("*").eq("user_id", session.user.id);
       if (data) setConnected(data);
     }
@@ -89,12 +86,11 @@ export default function PlatformsPage() {
 
       <main className="max-w-[1000px] mx-auto px-6 py-10">
         <h1 className="text-[28px] font-bold tracking-tight">판매 플랫폼 연동</h1>
-        <p className="text-[13px] opacity-60 mt-2 break-keep">네이버, 쿠팡, 11번가 등 판매 플랫폼의 API를 연동하면 주문을 자동으로 가져올 수 있습니다.</p>
+        <p className="text-[13px] opacity-60 mt-2">네이버, 쿠팡, 11번가 등 판매 플랫폼의 API를 연동하면 주문을 자동으로 가져올 수 있습니다.</p>
 
-        {/* 연동된 플랫폼 */}
         {connected.length > 0 && (
           <div className="mt-8 bg-white border border-black/5 rounded-[16px] p-6">
-            <h2 className="text-[14px] font-bold">✅ 연동된 플랫폼 ({connected.length})</h2>
+            <h2 className="text-[14px] font-bold">연동된 플랫폼 ({connected.length})</h2>
             <div className="mt-4 flex flex-wrap gap-2">
               {connected.map(c => {
                 const p = PLATFORMS.find(x=>x.id===c.platform);
@@ -104,7 +100,6 @@ export default function PlatformsPage() {
           </div>
         )}
 
-        {/* 플랫폼 목록 */}
         <div className="mt-8 grid md:grid-cols-2 gap-4">
           {PLATFORMS.map(p => {
             const isConnected = connected.some(c=>c.platform===p.id);
@@ -143,14 +138,13 @@ export default function PlatformsPage() {
           })}
         </div>
 
-        {/* 설명 */}
         <div className="mt-10 bg-black text-white rounded-[16px] p-6">
-          <h3 className="font-bold text-[14px]">🔧 연동 방법</h3>
+          <h3 className="font-bold text-[14px]">연동 방법</h3>
           <div className="mt-4 space-y-3 text-[11px] leading-relaxed opacity-80">
-            <p><b>네이버 스마트스토어:</b> 커머스 API 센터에서 Client ID/Secret 발급 → https://commerce.naver.com > 판매자센터 > API</p>
-            <p><b>쿠팡 WING:</b> WING > 판매자 정보 > API 키 발급 (Vendor ID, Access Key, Secret Key)</p>
-            <p><b>11번가:</b> 11번가 셀러오피스 > API 관리에서 발급</p>
-            <p className="text-amber-300">⚠️ 실제 주문 수집은 서버 크론 작업이 필요합니다. 현재는 연동 정보만 저장하고, /orders에서 테스트 주문으로 UI를 먼저 만듭니다.</p>
+            <p><b>네이버 스마트스토어:</b> 커머스 API 센터에서 Client ID/Secret 발급 - commerce.naver.com - 판매자센터 - API</p>
+            <p><b>쿠팡 WING:</b> WING - 판매자 정보 - API 키 발급 (Vendor ID, Access Key, Secret Key)</p>
+            <p><b>11번가:</b> 11번가 셀러오피스 - API 관리에서 발급</p>
+            <p className="text-amber-300">실제 주문 수집은 서버 크론 작업이 필요합니다. 현재는 연동 정보만 저장하고, /orders에서 테스트 주문으로 UI를 먼저 만듭니다.</p>
           </div>
           <div className="mt-6 flex gap-2">
             <Link href="/orders" className="px-5 py-2.5 rounded-full bg-white text-black text-[12px] font-bold">다음: 주문 관리 보기 →</Link>
