@@ -1,138 +1,103 @@
 "use client";
-import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useState } from "react";
 import Link from "next/link";
 
-const supabase = createClient(
-  "https://qkpnvfmsmvcemdblaahl.supabase.co",
-  "sb_publishable_bhaLFQf6wmB6wMx1NNkSAg_Ypyy48rF"
-);
+const PLANS = [
+  { id: "STARTER", name: "STARTER", quota: "월 10건", price: "26,900", per: "2,690원", over: "1,600원", range: "11-100건", switchText: "87건부터 LITE가 더 저렴", storage: "선반 1개", size: "300×450×250 / 1 SKU", badge: "BETA", popular: false },
+  { id: "LITE", name: "LITE", quota: "월 100건", price: "149,000", per: "1,490원", over: "1,400원", range: "101-500건", switchText: "421건부터 STANDARD가 더 저렴", storage: "파렛트 1개", size: "1.1×1.1×1.8m", badge: "ORIGINAL", popular: true },
+  { id: "STANDARD", name: "STANDARD", quota: "월 500건", price: "599,000", per: "1,198원", over: "1,200원", range: "501-1000건", switchText: "993건부터 GOLD가 더 저렴", storage: "파렛트 5개", size: "", badge: "", popular: false },
+  { id: "GOLD", name: "GOLD", quota: "월 1,000건", price: "1,190,000", per: "1,190원", over: "1,150원", range: "1001-3000건", switchText: "2,826건부터 PLATINUM이 더 저렴", storage: "파렛트 10개", size: "", badge: "", popular: false },
+  { id: "PLATINUM", name: "PLATINUM", quota: "월 3,000건", price: "3,290,000", per: "1,096원", over: "1,100원", range: "3001-5000건", switchText: "4,871건부터 VIP가 더 저렴", storage: "파렛트 25개", size: "", badge: "", popular: false },
+  { id: "VIP", name: "VIP", quota: "월 5,000건", price: "5,349,000", per: "1,069원", over: "1,050원", range: "5001건~", switchText: "대량 협의·규모 경제", storage: "파렛트 40개", size: "", badge: "", popular: false },
+];
 
 export default function HomePage() {
-  const [session, setSession] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      const { data: { session: s } } = await supabase.auth.getSession();
-      setSession(s);
-      if (s) {
-        const { data } = await supabase.from("seller_profiles").select("*").eq("user_id", s.user.id).single();
-        setProfile(data);
-      }
-    };
-    load();
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    location.reload();
-  };
+  const [selected, setSelected] = useState("STARTER");
 
   return (
     <div className="min-h-screen bg-[#fafaf8]">
       <header className="border-b border-black/5 bg-white/80 backdrop-blur-xl sticky top-0 z-20">
         <div className="max-w-[1200px] mx-auto px-6 h-[64px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-black rounded-full">F</div>
-            <span className="font-bold tracking-tight">FLEX CENTER</span>
-            <span className="text-[10px] opacity-40 ml-2 hidden md:block">마이크로 풀필먼트</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link href="/pricing" className="text-[12px] px-4 py-2 rounded-full border border-black/10">요금제</Link>
-            {session ? (
-              <>
-                <Link href="/dashboard" className="text-[12px] px-4 py-2 rounded-full bg-black text-white font-semibold">
-                  {profile?.company_name ? `${profile.company_name} 회원전용 →` : "회원전용 →"}
-                </Link>
-                <button onClick={handleLogout} className="text-[11px] px-3 py-2 rounded-full border border-black/10 opacity-60 hover:opacity-100">로그아웃</button>
-                {session.user.email === "phankyu@gmail.com" && <Link href="/admin" className="text-[11px] px-3 py-2 rounded-full bg-amber-500 text-black font-bold">ADMIN</Link>}
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="text-[12px] px-4 py-2 rounded-full border border-black/10">로그인</Link>
-                <Link href="/onboarding" className="text-[12px] px-5 py-2 rounded-full bg-black text-white font-semibold">회원가입 →</Link>
-              </>
-            )}
+          <div className="flex items-center gap-2"><div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center font-black text-[12px]">F</div><span className="font-bold">FLEX CENTER</span><span className="text-[11px] opacity-40 ml-2">김포센터</span></div>
+          <div className="flex gap-2 items-center">
+            <Link href="/login" className="text-[12px] px-4 py-2 rounded-full border border-black/10">로그인</Link>
+            <Link href="/onboarding" className="text-[12px] px-4 py-2 rounded-full bg-black text-white">회원가입</Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-[1200px] mx-auto px-6">
-        {/* HERO */}
-        <div className="py-16 md:py-24 flex flex-col md:flex-row gap-10 items-center">
-          <div className="flex-1">
-            <div className="inline-flex items-center gap-2 bg-black text-white rounded-full px-3 py-1 text-[10px] font-bold tracking-widest">NEW · 김포 마이크로 풀필먼트 센터</div>
-            <h1 className="text-[36px] md:text-[54px] font-bold tracking-tight mt-6 leading-[1.05]">당신의 상품을<br/>가장 빠르게<br/>고객에게</h1>
-            <p className="text-[14px] opacity-60 mt-6 leading-relaxed break-keep">소규모 이커머스 사장님을 위한 월 구독 풀필먼트. 보관부터 피킹, 포장, 출고까지 한 번에. 26,900원부터 시작. 김포에서 전국 당일 출고.</p>
-            <div className="mt-8 flex gap-3">
-              {session ? <Link href="/dashboard" className="px-7 py-3.5 rounded-full bg-black text-white text-[13px] font-bold">회원전용 바로가기 →</Link> : <Link href="/onboarding" className="px-7 py-3.5 rounded-full bg-black text-white text-[13px] font-bold">지금 회원가입 →</Link>}
-              <Link href="/pricing" className="px-7 py-3.5 rounded-full border border-black/10 text-[13px] font-semibold">요금제 보기</Link>
+      <main className="max-w-[1200px] mx-auto px-6 py-12">
+        <div className="flex items-center gap-2 text-[11px] opacity-60"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>BETA · 실제 발송 데이터 기반</div>
+        <h1 className="mt-4 text-[40px] font-black leading-[0.9] tracking-[-0.03em]">필요한 만큼만,<br/>투명하게.</h1>
+        <p className="mt-4 text-[14px] opacity-60 max-w-[480px]">합포장 3개, 바코드 라벨링, 박스+완충재+인쇄까지 모두 포함. 숨겨진 비용 없습니다.</p>
+
+        <div className="mt-10 grid md:grid-cols-3 gap-4">
+          {PLANS.slice(0,3).map(p=>(
+            <div key={p.id} className={`rounded-[20px] p-6 border-2 bg-white relative ${selected===p.id ? "border-black" : "border-black/5"} ${p.popular ? "pt-8" : ""}`}>
+              {p.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-black px-3 py-1 rounded-full">MOST POPULAR</div>}
+              <div className="flex items-start justify-between"><div><div className="flex items-center gap-2"><span className="font-bold text-[12px] tracking-widest">{p.name}</span>{p.badge && <span className="bg-black text-white text-[9px] px-2 py-0.5 rounded-full font-bold">{p.badge}</span>}</div><p className="text-[11px] opacity-50 mt-1">{p.quota}</p></div><div className="text-right"><p className="text-[10px] opacity-40">건당</p><p className="font-bold text-[12px]">{p.per}</p><button onClick={()=>setSelected(p.id)} className={`mt-1 w-6 h-6 rounded-full border flex items-center justify-center ${selected===p.id ? "bg-black text-white border-black" : "border-black/10"}`}>{selected===p.id && "✓"}</button></div></div>
+              <p className="mt-6 text-[28px] font-black">{p.price}<span className="text-[14px] font-normal opacity-50"> 원 / 월</span></p>
+              <div className="mt-3"><span className="bg-black text-white text-[11px] px-3 py-1 rounded-full font-bold">{p.storage}</span><span className="text-[11px] opacity-50 ml-2">{p.size}</span></div>
+              <div className="mt-5 space-y-2 text-[12px]"><p className="flex items-center gap-2"><span className="w-4 h-4 bg-black text-white rounded-full flex items-center justify-center text-[10px]">✓</span>합포장 3개 무료</p><p className="flex items-center gap-2"><span className="w-4 h-4 bg-black text-white rounded-full flex items-center justify-center text-[10px]">✓</span>바코드 라벨링 무료</p><p className="flex items-center gap-2"><span className="w-4 h-4 bg-black text-white rounded-full flex items-center justify-center text-[10px]">✓</span>일반 포장 무료</p></div>
+              <button onClick={()=>setSelected(p.id)} className={`mt-6 w-full py-3 rounded-full font-bold text-[12px] ${selected===p.id ? "bg-black text-white" : "border border-black/10"}`}>{selected===p.id ? "선택됨 ✓" : `${p.name} 선택`}</button>
             </div>
-            {session && <div className="mt-6 bg-white border border-black/5 rounded-[12px] px-4 py-3 text-[11px]"><p className="font-bold">로그인됨: {session.user.email}</p><p className="opacity-60 mt-1">{profile ? `${profile.company_name || "상호 미입력"} · ${profile.status === "pending" ? "승인 대기 중 ⏳" : profile.status === "approved" ? "승인됨 ✅" : profile.status} ${profile.company_name ? "" : "- /onboarding에서 인증 필요"}` : "사업자 정보 없음 - /onboarding에서 인증 필요 (관리자는 /admin에서 바로 승인 가능)"}</p></div>}
+          ))}
+        </div>
+
+        <div className="mt-4 grid md:grid-cols-3 gap-4">
+          {PLANS.slice(3).map(p=>(
+            <div key={p.id} className={`rounded-[20px] p-6 border bg-white ${selected===p.id ? "border-black border-2" : "border-black/5"}`}>
+              <div className="flex items-start justify-between"><div><span className="font-bold text-[12px] tracking-widest">{p.name}</span><p className="text-[11px] opacity-50 mt-1">{p.quota}</p></div><div className="text-right"><p className="text-[10px] opacity-40">건당</p><p className="font-bold text-[12px]">{p.per}</p><button onClick={()=>setSelected(p.id)} className={`mt-1 w-6 h-6 rounded-full border flex items-center justify-center ${selected===p.id ? "bg-black text-white border-black" : "border-black/10"}`}>{selected===p.id && "✓"}</button></div></div>
+              <p className="mt-6 text-[28px] font-black">{p.price}<span className="text-[14px] font-normal opacity-50"> 원 / 월</span></p>
+              <div className="mt-3"><span className="bg-black/5 text-[11px] px-3 py-1 rounded-full font-bold">{p.storage}</span></div>
+              <div className="mt-5 space-y-2 text-[12px] opacity-60"><p className="flex items-center gap-2"><span className="w-4 h-4 bg-black/10 rounded-full flex items-center justify-center text-[10px]">✓</span>합포장 3개 무료</p><p className="flex items-center gap-2"><span className="w-4 h-4 bg-black/10 rounded-full flex items-center justify-center text-[10px]">✓</span>바코드 라벨링 무료</p><p className="flex items-center gap-2"><span className="w-4 h-4 bg-black/10 rounded-full flex items-center justify-center text-[10px]">✓</span>일반 포장 무료</p></div>
+              <button onClick={()=>setSelected(p.id)} className={`mt-6 w-full py-3 rounded-full font-bold text-[12px] ${selected===p.id ? "bg-black text-white" : "border border-black/10"}`}>{selected===p.id ? "선택됨 ✓" : `${p.name} 선택`}</button>
+            </div>
+          ))}
+        </div>
+
+        {/* 새 요금제 테이블 - 이게 안 보였던 거! */}
+        <div className="mt-16 border-t border-black/5 pt-12">
+          <h2 className="text-[12px] opacity-40 tracking-widest">PRICING DETAILS</h2>
+          <div className="mt-8 overflow-auto rounded-[16px] border border-black/5 bg-white">
+            <table className="w-full text-[12px]">
+              <thead className="bg-black text-white text-[11px]"><tr><th className="text-left py-3 px-4">요금제</th><th className="text-left">조합 건수</th><th className="text-left">월 요금</th><th className="text-left">건당 단가</th><th className="text-left"><span className="bg-green-500 text-white px-2 py-0.5 rounded-full text-[10px]">초과 건당 (CHEAP)</span></th><th className="text-left">자동 전환 안내</th><th className="text-left">보관 포함</th></tr></thead>
+              <tbody>
+                {PLANS.map(p=>(
+                  <tr key={p.id} className={`border-b border-black/5 ${selected===p.id ? "bg-[#fafaf8]" : ""}`}><td className="py-3 px-4 font-bold">{p.name}</td><td>{p.quota}</td><td>{p.price}원</td><td>{p.per}</td><td><span className="bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded-full text-[11px] font-bold">{p.over} ({p.range}) ↓</span></td><td className="text-[11px] opacity-60">{p.switchText}</td><td>{p.storage}</td></tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="flex-1 grid grid-cols-2 gap-3">
-            <div className="space-y-3">
-              <div className="rounded-[20px] overflow-hidden h-[180px] bg-white border border-black/5 shadow-sm"><img src="/fulfillment-1.jpg" alt="AI fulfillment center" className="w-full h-full object-cover" /></div>
-              <div className="rounded-[20px] overflow-hidden h-[240px] bg-white border border-black/5 shadow-sm"><img src="/fulfillment-2.jpg" alt="picking packing" className="w-full h-full object-cover" /></div>
-            </div>
-            <div className="rounded-[20px] overflow-hidden h-[432px] bg-white border border-black/5 shadow-sm"><img src="/fulfillment-3.jpg" alt="woman checking orders" className="w-full h-full object-cover" /></div>
+          <div className="mt-3 flex gap-2 text-[11px]">
+            <span className="bg-green-50 border border-green-200 text-green-700 px-3 py-1 rounded-full">Toss Payments Metered Billing 지원 (사실)</span>
+            <span className="bg-black/5 px-3 py-1 rounded-full opacity-60">규모 경제: STANDARD+ 원가 1,100원대 → 1,200원대 마진 8%</span>
           </div>
         </div>
 
-        {/* COMPANY INTRO */}
-        <div className="py-16 border-t border-black/5">
-          <div className="max-w-[800px]">
-            <h2 className="text-[24px] md:text-[32px] font-bold tracking-tight leading-tight">소규모 셀러를 위한<br/>진짜 마이크로 풀필먼트를 만듭니다</h2>
-            <p className="text-[13px] opacity-60 mt-4 leading-relaxed break-keep">FLEX CENTER는 김포에 위치한 마이크로 풀필먼트 센터입니다. 대형 풀필먼트(FASSTO, 품고)는 최소 보관료가 높고, 소규모 셀러는 진입이 어렵습니다. 우리는 10건, 100건 단위의 소규모 셀러를 위해 월 26,900원부터 시작하는 구독 모델을 만들었습니다. 선반 1개부터, 파렛트 1개부터. 필요한 만큼만.</p>
-          </div>
-          <div className="mt-10 grid md:grid-cols-3 gap-4">
-            <div className="bg-white border border-black/5 rounded-[20px] p-7">
-              <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center text-[16px]">📦</div>
-              <h3 className="font-bold text-[14px] mt-4">보관</h3><p className="text-[12px] opacity-60 mt-2 leading-relaxed">선반 보관, 파렛트 보관. 월 10건부터 5000건까지 플랜별 보관. 60일 이상 장기 보관은 50% 할증, 합리적 운영.</p>
-            </div>
-            <div className="bg-white border border-black/5 rounded-[20px] p-7">
-              <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center text-[16px]">🚚</div>
-              <h3 className="font-bold text-[14px] mt-4">출고</h3><p className="text-[12px] opacity-60 mt-2 leading-relaxed">오후 2시 이전 주문은 당일 출고. 합포장 3개 무료, 바코드 라벨링 무료. CJ대한통운 연동으로 송장 자동 출력.</p>
-            </div>
-            <div className="bg-white border border-black/5 rounded-[20px] p-7">
-              <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center text-[16px]">🔄</div>
-              <h3 className="font-bold text-[14px] mt-4">연동</h3><p className="text-[12px] opacity-60 mt-2 leading-relaxed">네이버, 쿠팡, 11번가, G마켓 주문 자동 수집. WMS 기반 피킹, 패킹, 출고. 플랫폼에 송장번호 자동 업로드.</p>
-            </div>
+        <div className="mt-16 border-t border-black/5 pt-12">
+          <h2 className="text-[12px] opacity-40 tracking-widest">STORAGE & FEES</h2>
+          <p className="mt-2 text-[22px] font-black">보관은 필요한 만큼,<br/>초과도 합리적으로.</p>
+          <div className="mt-6 grid md:grid-cols-6 gap-3">
+            {PLANS.map(p=>(
+              <div key={p.id} className={`rounded-[16px] p-4 border bg-white ${selected===p.id ? "border-black border-2" : "border-black/5"}`}><p className="text-[10px] opacity-40">{p.name}</p><p className="font-bold text-[13px] mt-1">{p.storage}</p><p className="text-[11px] opacity-60 mt-1">{p.id==="STARTER" ? "초과 불가" : p.id==="LITE" ? "3만원 / 월" : p.id==="STANDARD" ? "3만원 / 월" : p.id==="GOLD" ? "2.5만원 / 월" : "2만원 / 월"}</p><p className="text-[10px] mt-2 bg-black/5 px-2 py-1 rounded-full inline-block">최소 {p.id==="STARTER" ? "1만원" : p.id==="LITE" ? "5만원" : p.id==="STANDARD" ? "15만원" : p.id==="GOLD" ? "25만원" : p.id==="PLATINUM" ? "50만원" : "80만원"}</p></div>
+            ))}
           </div>
         </div>
 
-        {/* PRICING PREVIEW */}
-        <div className="py-16 border-t border-black/5">
-          <div className="flex items-end justify-between">
-            <div><h2 className="text-[24px] font-bold">요금제</h2><p className="text-[12px] opacity-60 mt-2">10건부터 5000건까지, 필요한 만큼만 구독</p></div>
-            <Link href="/pricing" className="text-[12px] px-5 py-2.5 rounded-full bg-black text-white font-semibold">전체 요금제 보기 →</Link>
-          </div>
-          <div className="mt-8 grid md:grid-cols-3 gap-3">
-            <div className="bg-white border border-black/5 rounded-[16px] p-5"><p className="text-[11px] font-bold opacity-50">STARTER</p><p className="text-[20px] font-bold mt-1">26,900원<span className="text-[11px] font-normal opacity-50">/월</span></p><p className="text-[11px] opacity-60 mt-2">10건 · 선반 1개</p></div>
-            <div className="bg-black text-white rounded-[16px] p-5 relative"><div className="absolute -top-2 -right-2 bg-amber-400 text-black text-[9px] font-bold px-2 py-1 rounded-full">MOST POPULAR</div><p className="text-[11px] font-bold opacity-60">LITE</p><p className="text-[20px] font-bold mt-1">149,000원<span className="text-[11px] font-normal opacity-60">/월</span></p><p className="text-[11px] opacity-60 mt-2">100건 · 파렛트 1개 · 합포장 무료</p></div>
-            <div className="bg-white border border-black/5 rounded-[16px] p-5"><p className="text-[11px] font-bold opacity-50">STANDARD</p><p className="text-[20px] font-bold mt-1">599,000원<span className="text-[11px] font-normal opacity-50">/월</span></p><p className="text-[11px] opacity-60 mt-2">500건 · 파렛트 5개</p></div>
-          </div>
-        </div>
-
-        {/* HOW IT WORKS */}
-        <div className="py-16 border-t border-black/5 bg-white -mx-6 px-6 md:-mx-0 md:px-0 md:rounded-[24px] md:border md:p-10">
-          <h2 className="text-[20px] font-bold">이용 방법</h2>
-          <div className="mt-8 grid md:grid-cols-4 gap-6">
-            <div><div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-bold">1</div><p className="font-bold text-[13px] mt-3">회원가입 및 사업자 인증</p><p className="text-[11px] opacity-60 mt-1">/onboarding에서 사업자등록증, 신분증, 통장사본 제출. 24시간 내 승인.</p></div>
-            <div><div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-bold">2</div><p className="font-bold text-[13px] mt-3">플랫폼 연동</p><p className="text-[11px] opacity-60 mt-1">/platforms에서 네이버, 쿠팡, 11번가 API 연동. 주문 자동 수집.</p></div>
-            <div><div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-bold">3</div><p className="font-bold text-[13px] mt-3">입고 및 보관</p><p className="text-[11px] opacity-60 mt-1">상품을 김포 센터로 입고. 선반/파렛트에 보관. MY STATS에서 재고 확인.</p></div>
-            <div><div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-[12px] font-bold">4</div><p className="font-bold text-[13px] mt-3">자동 풀필먼트</p><p className="text-[11px] opacity-60 mt-1">주문 발생 시 WMS에서 피킹, 패킹, 송장 출력. 당일 출고, 송장번호 자동 업로드.</p></div>
+        <div className="mt-16 border-t border-black/5 pt-12 pb-20">
+          <h2 className="text-[11px] opacity-40 tracking-widest">NIGHT & WEEKEND</h2>
+          <div className="flex items-center justify-between mt-2"><p className="text-[20px] font-black">야간·주말, 정해진 기준대로만.</p><div className="flex gap-2 text-[11px]"><span className="bg-black text-white px-3 py-1.5 rounded-full">평일 주간 09-18시 포함</span><span className="border border-black/10 px-3 py-1.5 rounded-full">연장·야간·휴일 +300~600원</span></div></div>
+          <div className="mt-6 grid grid-cols-6 gap-0 border border-black/5 rounded-[16px] overflow-hidden bg-white text-[12px] text-center">
+            <div className="py-4 border-r border-black/5"><p className="text-[11px] opacity-50">평일 주간</p><p className="text-[10px] opacity-40">09-18</p><p className="mt-2 font-bold text-green-600">포함</p></div>
+            <div className="py-4 border-r border-black/5"><p className="text-[11px] opacity-50">평일 연장</p><p className="text-[10px] opacity-40">18-22</p><p className="mt-2 font-bold text-amber-600">+300원</p></div>
+            <div className="py-4 border-r border-black/5"><p className="text-[11px] opacity-50">야간</p><p className="text-[10px] opacity-40">22-06</p><p className="mt-2 font-bold text-amber-600">+300원</p></div>
+            <div className="py-4 border-r border-black/5"><p className="text-[11px] opacity-50">연장+야간</p><p className="text-[10px] opacity-40">22-24</p><p className="mt-2 font-bold text-red-600">+600원</p></div>
+            <div className="py-4 border-r border-black/5"><p className="text-[11px] opacity-50">주말 주간</p><p className="text-[10px] opacity-40">09-18</p><p className="mt-2 font-bold text-amber-600">+300원</p></div>
+            <div className="py-4"><p className="text-[11px] opacity-50">주말 야간</p><p className="text-[10px] opacity-40">22-06</p><p className="mt-2 font-bold text-red-600">+600원</p></div>
           </div>
         </div>
       </main>
-
-      <footer className="mt-20 border-t border-black/5 py-10">
-        <div className="max-w-[1200px] mx-auto px-6 flex flex-col md:flex-row justify-between gap-4">
-          <div><p className="font-bold text-[13px]">FLEX CENTER 마이크로 풀필먼트</p><p className="text-[11px] opacity-50 mt-1">경기도 김포시 · 문의: phankyu@gmail.com · 월 구독 풀필먼트, 보관부터 출고까지</p></div>
-          <div className="flex gap-4 text-[11px] opacity-60"><Link href="/privacy" className="underline">개인정보처리방침</Link><Link href="/terms" className="underline">이용약관</Link><Link href="/pricing" className="underline">요금제</Link><Link href="/platforms" className="underline">플랫폼 연동</Link></div>
-        </div>
-      </footer>
     </div>
   );
 }
