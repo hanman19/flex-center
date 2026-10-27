@@ -8,13 +8,8 @@ const supabase = createClient(
   "sb_publishable_bhaLFQf6wmB6wMx1NNkSAg_Ypyy48rF"
 );
 
-// 직원 이메일 추가하는 곳 - 여기에 추가하면 작업자 WMS 볼 수 있어요!
 const ADMIN_EMAILS = [
   "phankyu@gmail.com",
-  // 여기에 직원 이메일 추가하세요! 예:
-  // "worker1@flexcenter.kr",
-  // "worker2@flexcenter.kr",
-  // "gimpo-team@flexcenter.kr",
 ];
 
 export default function AdminWMSPage() {
@@ -35,7 +30,7 @@ export default function AdminWMSPage() {
     const load = async () => {
       const { data: { session: s } } = await supabase.auth.getSession();
       setSession(s);
-      if (s && ADMIN_EMAILS.includes(s.user.email)) setIsAdmin(true);
+      if (s?.user?.email && ADMIN_EMAILS.includes(s.user.email)) setIsAdmin(true);
       setLoading(false);
     };
     load();
@@ -49,7 +44,7 @@ export default function AdminWMSPage() {
   const wavePicking = [...orders].sort((a,b)=>a.location.localeCompare(b.location));
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">로딩중...</div>;
-  if (!isAdmin) return <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafaf8]"><p className="text-[14px] font-bold">작업자 전용 WMS - 권한 없음</p><p className="text-[12px] opacity-50 mt-1">현재 {session?.user?.email || "로그인 안됨"}</p><p className="text-[11px] opacity-40 mt-2">허용된 이메일: {ADMIN_EMAILS.join(", ")}</p><p className="text-[11px] opacity-40 mt-1">관리자에게 직원 이메일 등록을 요청하세요</p><Link href="/login" className="mt-4 bg-black text-white px-6 py-3 rounded-full text-[12px]">로그인</Link></div>;
+  if (!isAdmin) return <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafaf8]"><p className="text-[14px] font-bold">작업자 전용 WMS - 권한 없음</p><p className="text-[12px] opacity-50 mt-1">현재 {session?.user?.email || "로그인 안됨"}</p><p className="text-[11px] opacity-40 mt-2">허용된 이메일: {ADMIN_EMAILS.join(", ")}</p><Link href="/login" className="mt-4 bg-black text-white px-6 py-3 rounded-full text-[12px]">로그인</Link></div>;
 
   const totalOrders = orders.length;
   const doneCount = completed.length;
@@ -67,7 +62,6 @@ export default function AdminWMSPage() {
           <div className="flex gap-2 items-center"><span className="text-[11px] opacity-60 mr-2">{session?.user?.email}</span><select value={worker} onChange={e=>setWorker(e.target.value)} className="bg-white/10 border border-white/20 rounded-full px-4 py-2 text-[12px]"><option>작업자 A</option><option>작업자 B</option><option>작업자 C</option></select><Link href="/admin" className="text-[12px] px-4 py-2 rounded-full border border-white/20">셀러 승인</Link></div>
         </div>
       </header>
-
       <main className="max-w-[1400px] mx-auto px-6 py-6">
         <div className="grid md:grid-cols-4 gap-4">
           <div className="bg-white border border-black/5 rounded-[16px] p-5"><p className="text-[11px] opacity-40">오늘 전체 주문</p><p className="text-[28px] font-black mt-1">{totalOrders}건</p><p className="text-[11px] opacity-50 mt-1">모든 셀러 합계</p></div>
@@ -75,7 +69,6 @@ export default function AdminWMSPage() {
           <div className="bg-white border border-black/5 rounded-[16px] p-5"><p className="text-[11px] opacity-40">피킹 효율</p><p className="text-[14px] font-bold mt-1">선반 동선 최적화</p><p className="text-[11px] opacity-50 mt-1">A구역 4건, B구역 1건</p></div>
           <div className="bg-amber-400 text-black rounded-[16px] p-5"><p className="text-[11px] opacity-70">합포장 대상</p><p className="text-[20px] font-black mt-1">1건 무료</p><p className="text-[11px] opacity-70 mt-1">같은 선반 2건 - 묶어서 피킹</p></div>
         </div>
-
         <div className="mt-6 grid lg:grid-cols-[1fr_340px] gap-4">
           <div className="bg-white border border-black/5 rounded-[16px] overflow-hidden">
             <div className="px-6 py-4 border-b border-black/5 flex items-center justify-between"><h3 className="font-bold text-[15px]">웨이브 피킹 리스트 - {worker} - 선반 순서대로</h3><button className="text-[11px] px-3 py-1.5 rounded-full bg-black text-white font-bold">피킹 리스트 인쇄</button></div>
@@ -97,7 +90,6 @@ export default function AdminWMSPage() {
               <Link href="/orders" className="px-6 py-3 rounded-full border border-black/10 text-[12px] font-bold bg-white">주문관리에서 송장 출력</Link>
             </div>
           </div>
-
           <div className="space-y-4">
             <div className="bg-black text-white rounded-[16px] p-5">
               <h4 className="font-bold text-[13px]">김포 센터 선반 맵 - 전체</h4>
@@ -108,28 +100,13 @@ export default function AdminWMSPage() {
                   return <div key={loc} className={`h-[56px] rounded-[8px] border flex flex-col items-center justify-center ${hasStock ? "bg-white text-black border-white" : "bg-white/10 border-white/20 text-white/30"}`}><span className="font-mono font-bold text-[9px]">{loc}</span><span className="text-[8px] mt-1 font-bold">{hasStock ? `${count}건 피킹` : "빈 선반"}</span></div>
                 })}
               </div>
-              <p className="text-[10px] opacity-40 mt-3">* 오늘 피킹할 선반은 흰색으로 표시</p>
             </div>
-
             <div className="bg-white border border-black/5 rounded-[16px] p-5">
               <h4 className="font-bold text-[13px]">선반별 묶음 피킹</h4>
               <div className="mt-3 space-y-2">
                 {Object.entries(sameLocationGroups).map(([loc, ords]: any) => (
                   <div key={loc} className="flex items-center justify-between bg-[#fafaf8] rounded-[8px] px-3 py-2"><span className="font-mono text-[11px] font-bold">{loc}</span><span className="text-[11px]">{ords.length}건 같이 피킹 가능!</span><span className="text-[10px] bg-black text-white px-2 py-1 rounded-full">{ords.reduce((s:any,o:any)=>s+o.qty,0)}개</span></div>
                 ))}
-              </div>
-              <p className="text-[10px] opacity-50 mt-3">💡 같은 선반에 있는 주문은 한 번에 가져오면 동선 절약!</p>
-            </div>
-
-            <div className="bg-white border border-black/5 rounded-[16px] p-5">
-              <h4 className="font-bold text-[13px]">직원 권한 관리</h4>
-              <div className="mt-3 text-[11px] leading-relaxed opacity-70">
-                <p>현재 허용된 이메일:</p>
-                <ul className="mt-2 list-disc ml-4">
-                  {ADMIN_EMAILS.map(e=><li key={e} className="font-mono">{e}</li>)}
-                </ul>
-                <p className="mt-3">직원 추가하려면 코드 맨 위 ADMIN_EMAILS 배열에 이메일 추가하세요!</p>
-                <p className="mt-2 text-[10px] bg-[#fafaf8] p-2 rounded">나중에는 Supabase에 admin_users 테이블 만들어서 DB로 관리하면 더 편해요!</p>
               </div>
             </div>
           </div>
