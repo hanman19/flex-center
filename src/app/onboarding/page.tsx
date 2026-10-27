@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 
@@ -8,85 +8,71 @@ const supabase = createClient(
   "sb_publishable_bhaLFQf6wmB6wMx1NNkSAg_Ypyy48rF"
 );
 
+const initialForm = {
+  email: "", password: "", phone: "",
+  business_type: "개인사업자",
+  business_no: "", company_name: "", ceo_name: "",
+  opening_date: "", business_address: "", business_category: "",
+  bank_name: "", account_no: "", account_holder: "", tax_email: "",
+  sku_count: "", monthly_orders: "", storage_type: "", sales_channels: "", special_note: "",
+  agree_terms: false, agree_privacy: false, agree_privacy_collect: false, agree_marketing: false,
+};
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [form, setForm] = useState({
-    email: "", password: "", phone: "",
-    business_type: "개인사업자",
-    business_no: "", company_name: "", ceo_name: "",
-    opening_date: "", business_address: "", business_category: "",
-    bank_name: "", account_no: "", account_holder: "", tax_email: "",
-    sku_count: "", monthly_orders: "", storage_type: "", sales_channels: "", special_note: "",
-    agree_terms: false, agree_privacy: false, agree_privacy_collect: false, agree_marketing: false,
-  });
+  const [form, setForm] = useState(initialForm);
   const [files, setFiles] = useState<{[k:string]: File | null}>({ biz_license: null, online_sales: null, id_card: null, bank_book: null });
+
+  // ★ 다른 페이지 갔다 오면 초기화 (다른 사이트처럼)
+  useEffect(() => {
+    setForm(initialForm);
+    setStep(1);
+    setFiles({ biz_license: null, online_sales: null, id_card: null, bank_book: null });
+    setDone(false);
+    
+    // 페이지 떠날 때도 초기화
+    const handleBeforeUnload = () => {
+      setForm(initialForm);
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   const handleSubmit = async () => {
     if (!form.agree_terms || !form.agree_privacy || !form.agree_privacy_collect) { alert("필수 약관에 동의해주세요!"); return; }
     setLoading(true);
     try {
       let uid: string | null = null;
-
-      // 1. 회원가입 시도
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email: form.email, password: form.password });
-      
-      if (signUpData.user) {
-        uid = signUpData.user.id;
-      } else if (signUpError) {
-        // 이미 가입된 경우 로그인 시도
+      if (signUpData.user) uid = signUpData.user.id;
+      else if (signUpError) {
         if (signUpError.message.includes("already registered") || signUpError.message.includes("already exists")) {
           const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
-          if (loginError) throw new Error("이미 가입된 이메일입니다. 비밀번호를 확인하거나 다른 이메일을 사용하세요. 에러: " + loginError.message);
+          if (loginError) throw new Error("이미 가입된 이메일입니다. 비밀번호를 확인하세요.");
           uid = loginData.user.id;
-        } else {
-          throw signUpError;
-        }
+        } else throw signUpError;
       }
-
       if (!uid) throw new Error("사용자 ID를 가져올 수 없습니다.");
 
-      // 2. 서류 업로드 (있으면)
       for (const key of Object.keys(files)) {
         const file = files[key];
-        if (file) {
-          try { await supabase.storage.from("seller_docs").upload(`${uid}/${key}_${Date.now()}_${file.name}`, file); } catch(e) { console.log("upload skip", e); }
-        }
+        if (file) { try { await supabase.storage.from("seller_docs").upload(`${uid}/${key}_${Date.now()}_${file.name}`, file); } catch(e) {} }
       }
 
-      // 3. 프로필 저장 (plan 컬럼 없애고 저장)
       const { error: profileError } = await supabase.from("seller_profiles").upsert({
-        user_id: uid,
-        business_type: form.business_type,
-        business_no: form.business_no,
-        company_name: form.company_name,
-        ceo_name: form.ceo_name,
-        opening_date: form.opening_date || null,
-        business_address: form.business_address,
-        business_category: form.business_category,
-        bank_name: form.bank_name,
-        account_no: form.account_no,
-        account_holder: form.account_holder,
-        tax_email: form.tax_email,
-        sku_count: form.sku_count,
-        monthly_orders: form.monthly_orders,
-        storage_type: form.storage_type,
+        user_id: uid, business_type: form.business_type, business_no: form.business_no, company_name: form.company_name, ceo_name: form.ceo_name,
+        opening_date: form.opening_date || null, business_address: form.business_address, business_category: form.business_category,
+        bank_name: form.bank_name, account_no: form.account_no, account_holder: form.account_holder, tax_email: form.tax_email,
+        sku_count: form.sku_count, monthly_orders: form.monthly_orders, storage_type: form.storage_type,
         sales_channels: form.sales_channels.split(",").map(s=>s.trim()).filter(Boolean),
-        special_note: form.special_note,
-        agree_terms: form.agree_terms,
-        agree_privacy: form.agree_privacy,
-        agree_privacy_collect: form.agree_privacy_collect,
-        agree_marketing: form.agree_marketing,
-        status: "pending",
+        special_note: form.special_note, agree_terms: form.agree_terms, agree_privacy: form.agree_privacy,
+        agree_privacy_collect: form.agree_privacy_collect, agree_marketing: form.agree_marketing, status: "pending",
       }, { onConflict: "user_id" });
-      
       if (profileError) throw profileError;
-
       setDone(true);
-    } catch (e: any) {
-      alert("에러: " + e.message);
-    } finally { setLoading(false); }
+    } catch (e: any) { alert("에러: " + e.message); } finally { setLoading(false); }
   };
 
   if (done) {
@@ -96,9 +82,6 @@ export default function OnboardingPage() {
           <div className="w-12 h-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center mx-auto text-[20px]">✓</div>
           <h1 className="text-[22px] font-bold mt-5">신청이 완료되었습니다!</h1>
           <p className="text-[13px] opacity-60 mt-3 break-keep">관리자(phankyu@gmail.com)가 24시간 이내<br/>서류를 검토한 후 승인해드립니다.</p>
-          <div className="mt-6 bg-[#fafaf8] border border-black/5 rounded-[12px] p-4 text-left text-[11px] leading-relaxed">
-            <p className="font-bold">신청 정보</p><p className="opacity-60 mt-1">상호: {form.company_name} / 사업자번호: {form.business_no}</p><p className="opacity-60">이메일: {form.email}</p>
-          </div>
           <div className="mt-8 space-y-3">
             <Link href="/" className="block w-full bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">홈으로 돌아가기</Link>
             <Link href="/dashboard" className="block w-full border border-black/10 rounded-full py-3.5 text-[13px] font-semibold">회원전용 상태 확인 →</Link>
@@ -113,7 +96,7 @@ export default function OnboardingPage() {
       <header className="border-b border-black/5 bg-white/70 backdrop-blur-xl sticky top-0 z-20">
         <div className="max-w-[900px] mx-auto px-6 h-[64px] flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2"><div className="w-7 h-7 bg-black text-white flex items-center justify-center font-black rounded-full text-[12px]">F</div><span className="font-semibold text-[14px]">FLEX CENTER 회원가입</span></Link>
-          <div className="text-[11px] opacity-50">STEP {step} / 5</div>
+          <div className="flex items-center gap-3"><div className="text-[11px] opacity-50">STEP {step} / 5</div><button onClick={()=>{setForm(initialForm); setStep(1); setFiles({ biz_license: null, online_sales: null, id_card: null, bank_book: null });}} className="text-[10px] px-3 py-1 rounded-full border border-black/10">🔄 초기화</button></div>
         </div>
       </header>
       <main className="max-w-[900px] mx-auto px-6 py-10">
