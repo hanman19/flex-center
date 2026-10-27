@@ -27,27 +27,35 @@ export default function OnboardingPage() {
     if (!form.agree_terms || !form.agree_privacy || !form.agree_privacy_collect) { alert("필수 약관에 동의해주세요!"); return; }
     setLoading(true);
     try {
-      // 1. 회원가입 (auth)
-      const { data: authData, error: authError } = await supabase.auth.signUp({ email: form.email, password: form.password });
-      if (authError) throw authError;
-      const userId = authData.user?.id || authData.user?.id;
-      let uid = userId;
-      if (!uid) {
-        // 이미 가입된 경우 로그인 시도
-        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
-        if (loginError) throw new Error("이미 가입된 이메일입니다. 로그인 후 진행해주세요.");
-        uid = loginData.user.id;
-      }
+      let uid: string | null = null;
 
-      // 2. 서류 업로드
-      for (const key of Object.keys(files)) {
-        const file = files[key];
-        if (file) {
-          await supabase.storage.from("seller_docs").upload(`${uid}/${key}_${Date.now()}_${file.name}`, file);
+      // 1. 회원가입 시도
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email: form.email, password: form.password });
+      
+      if (signUpData.user) {
+        uid = signUpData.user.id;
+      } else if (signUpError) {
+        // 이미 가입된 경우 로그인 시도
+        if (signUpError.message.includes("already registered") || signUpError.message.includes("already exists")) {
+          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+          if (loginError) throw new Error("이미 가입된 이메일입니다. 비밀번호를 확인하거나 다른 이메일을 사용하세요. 에러: " + loginError.message);
+          uid = loginData.user.id;
+        } else {
+          throw signUpError;
         }
       }
 
-      // 3. 프로필 저장
+      if (!uid) throw new Error("사용자 ID를 가져올 수 없습니다.");
+
+      // 2. 서류 업로드 (있으면)
+      for (const key of Object.keys(files)) {
+        const file = files[key];
+        if (file) {
+          try { await supabase.storage.from("seller_docs").upload(`${uid}/${key}_${Date.now()}_${file.name}`, file); } catch(e) { console.log("upload skip", e); }
+        }
+      }
+
+      // 3. 프로필 저장 (plan 컬럼 없애고 저장)
       const { error: profileError } = await supabase.from("seller_profiles").upsert({
         user_id: uid,
         business_type: form.business_type,
@@ -71,7 +79,8 @@ export default function OnboardingPage() {
         agree_privacy_collect: form.agree_privacy_collect,
         agree_marketing: form.agree_marketing,
         status: "pending",
-      });
+      }, { onConflict: "user_id" });
+      
       if (profileError) throw profileError;
 
       setDone(true);
@@ -107,14 +116,11 @@ export default function OnboardingPage() {
           <div className="text-[11px] opacity-50">STEP {step} / 5</div>
         </div>
       </header>
-
       <main className="max-w-[900px] mx-auto px-6 py-10">
-        {/* Progress */}
         <div className="flex gap-2 mb-8">{[1,2,3,4,5].map(i=><div key={i} className={`h-[4px] flex-1 rounded-full ${i<=step?"bg-black":"bg-black/10"}`} />)}</div>
-
         {step===1 && (
           <div className="bg-white border border-black/5 rounded-[20px] p-7">
-            <h2 className="text-[18px] font-bold">기본 계정</h2><p className="text-[12px] opacity-50 mt-1">로그인에 사용할 이메일과 비밀번호를 입력하세요</p>
+            <h2 className="text-[18px] font-bold">기본 계정</h2><p className="text-[12px] opacity-50 mt-1">로그인에 사용할 이메일과 비밀번호</p>
             <div className="mt-6 grid gap-4">
               <div><label className="text-[11px] font-semibold opacity-70">이메일 *</label><input value={form.email} onChange={e=>setForm({...form, email:e.target.value})} placeholder="example@naver.com" className="mt-1 w-full border border-black/10 rounded-[10px] px-4 py-3 text-[13px]" /></div>
               <div><label className="text-[11px] font-semibold opacity-70">비밀번호 * (6자 이상)</label><input type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} className="mt-1 w-full border border-black/10 rounded-[10px] px-4 py-3 text-[13px]" /></div>
@@ -123,78 +129,46 @@ export default function OnboardingPage() {
             <button onClick={()=>{if(!form.email||!form.password) return alert("이메일, 비밀번호 필수!"); setStep(2);}} className="mt-8 w-full bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">다음 →</button>
           </div>
         )}
-
         {step===2 && (
           <div className="bg-white border border-black/5 rounded-[20px] p-7">
             <h2 className="text-[18px] font-bold">사업자 정보</h2>
             <div className="mt-6 grid gap-4">
               <div><label className="text-[11px] font-semibold">사업자 유형 *</label><select value={form.business_type} onChange={e=>setForm({...form, business_type:e.target.value})} className="mt-1 w-full border border-black/10 rounded-[10px] px-4 py-3 text-[13px]"><option>개인사업자</option><option>법인사업자</option><option>간이과세자</option><option>예비창업자</option></select></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="text-[11px] font-semibold">사업자등록번호 *</label><input value={form.business_no} onChange={e=>setForm({...form, business_no:e.target.value})} placeholder="123-45-67890" className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div>
-                <div><label className="text-[11px] font-semibold">상호명 *</label><input value={form.company_name} onChange={e=>setForm({...form, company_name:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="text-[11px] font-semibold">대표자명 *</label><input value={form.ceo_name} onChange={e=>setForm({...form, ceo_name:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div>
-                <div><label className="text-[11px] font-semibold">개업일자</label><input type="date" value={form.opening_date} onChange={e=>setForm({...form, opening_date:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div>
-              </div>
+              <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-semibold">사업자등록번호 *</label><input value={form.business_no} onChange={e=>setForm({...form, business_no:e.target.value})} placeholder="123-45-67890" className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div><div><label className="text-[11px] font-semibold">상호명 *</label><input value={form.company_name} onChange={e=>setForm({...form, company_name:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div></div>
+              <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-semibold">대표자명 *</label><input value={form.ceo_name} onChange={e=>setForm({...form, ceo_name:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div><div><label className="text-[11px] font-semibold">개업일자</label><input type="date" value={form.opening_date} onChange={e=>setForm({...form, opening_date:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div></div>
               <div><label className="text-[11px] font-semibold">사업장 주소 *</label><input value={form.business_address} onChange={e=>setForm({...form, business_address:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div>
               <div><label className="text-[11px] font-semibold">업태/업종</label><input value={form.business_category} onChange={e=>setForm({...form, business_category:e.target.value})} placeholder="도소매 / 전자상거래" className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div>
             </div>
             <div className="mt-8 flex gap-3"><button onClick={()=>setStep(1)} className="px-6 py-3.5 rounded-full border text-[13px]">이전</button><button onClick={()=>setStep(3)} className="flex-1 bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">다음 →</button></div>
           </div>
         )}
-
         {step===3 && (
           <div className="bg-white border border-black/5 rounded-[20px] p-7">
-            <h2 className="text-[18px] font-bold">서류 업로드 (필수 4종)</h2><p className="text-[11px] opacity-50 mt-1 text-red-600">※ 신분증은 주민번호 뒷자리 6자리를 반드시 가림 처리 후 업로드하세요!</p>
-            <div className="mt-6 grid gap-4">
-              {[
-                { key:"biz_license", label:"사업자등록증 사본 *" },
-                { key:"online_sales", label:"통신판매업신고증" },
-                { key:"id_card", label:"대표자 신분증 사본 (마스킹 필수) *" },
-                { key:"bank_book", label:"통장사본 *" },
-              ].map(f=>(
-                <div key={f.key} className="flex items-center justify-between border border-black/10 rounded-[12px] px-4 py-3">
-                  <span className="text-[12px] font-semibold">{f.label}</span>
-                  <input type="file" onChange={e=>setFiles({...files, [f.key]: e.target.files?.[0]||null})} className="text-[11px]" />
-                </div>
-              ))}
-            </div>
+            <h2 className="text-[18px] font-bold">서류 업로드 (선택)</h2><p className="text-[11px] opacity-50 mt-1 text-red-600">※ 신분증은 주민번호 뒷자리 가림 처리 후 업로드</p>
+            <div className="mt-6 grid gap-4">{[{key:"biz_license",label:"사업자등록증 사본 *"},{key:"online_sales",label:"통신판매업신고증"},{key:"id_card",label:"대표자 신분증 사본 (마스킹 필수) *"},{key:"bank_book",label:"통장사본 *"}].map(f=>(<div key={f.key} className="flex items-center justify-between border border-black/10 rounded-[12px] px-4 py-3"><span className="text-[12px] font-semibold">{f.label}</span><input type="file" onChange={e=>setFiles({...files, [f.key]: e.target.files?.[0]||null})} className="text-[11px]" /></div>))}</div>
             <div className="mt-8 flex gap-3"><button onClick={()=>setStep(2)} className="px-6 py-3.5 rounded-full border text-[13px]">이전</button><button onClick={()=>setStep(4)} className="flex-1 bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">다음 →</button></div>
           </div>
         )}
-
         {step===4 && (
           <div className="bg-white border border-black/5 rounded-[20px] p-7">
             <h2 className="text-[18px] font-bold">정산 및 물류 정보</h2>
             <div className="mt-6 grid gap-4">
-              <div className="grid grid-cols-3 gap-3">
-                <input placeholder="은행명 (예: 국민)" value={form.bank_name} onChange={e=>setForm({...form, bank_name:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" />
-                <input placeholder="계좌번호" value={form.account_no} onChange={e=>setForm({...form, account_no:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px] col-span-2" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input placeholder="예금주" value={form.account_holder} onChange={e=>setForm({...form, account_holder:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" />
-                <input placeholder="세금계산서 이메일" value={form.tax_email} onChange={e=>setForm({...form, tax_email:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <input placeholder="SKU 수 (예: 50)" value={form.sku_count} onChange={e=>setForm({...form, sku_count:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" />
-                <input placeholder="월 주문량" value={form.monthly_orders} onChange={e=>setForm({...form, monthly_orders:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" />
-                <input placeholder="보관 유형" value={form.storage_type} onChange={e=>setForm({...form, storage_type:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" />
-              </div>
-              <input placeholder="판매 채널 (콤마로 구분: 스마트스토어, 쿠팡)" value={form.sales_channels} onChange={e=>setForm({...form, sales_channels:e.target.value})} className="w-full border rounded-[10px] px-4 py-3 text-[13px]" />
-              <textarea placeholder="특이사항 / 취급주의 상품" value={form.special_note} onChange={e=>setForm({...form, special_note:e.target.value})} className="w-full border rounded-[10px] px-4 py-3 text-[13px] h-[80px]" />
+              <div className="grid grid-cols-3 gap-3"><input placeholder="은행명" value={form.bank_name} onChange={e=>setForm({...form, bank_name:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /><input placeholder="계좌번호" value={form.account_no} onChange={e=>setForm({...form, account_no:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px] col-span-2" /></div>
+              <div className="grid grid-cols-2 gap-3"><input placeholder="예금주" value={form.account_holder} onChange={e=>setForm({...form, account_holder:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /><input placeholder="세금계산서 이메일" value={form.tax_email} onChange={e=>setForm({...form, tax_email:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /></div>
+              <div className="grid grid-cols-3 gap-3"><input placeholder="SKU 수" value={form.sku_count} onChange={e=>setForm({...form, sku_count:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /><input placeholder="월 주문량" value={form.monthly_orders} onChange={e=>setForm({...form, monthly_orders:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /><input placeholder="보관 유형" value={form.storage_type} onChange={e=>setForm({...form, storage_type:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /></div>
+              <input placeholder="판매 채널 (콤마로 구분)" value={form.sales_channels} onChange={e=>setForm({...form, sales_channels:e.target.value})} className="w-full border rounded-[10px] px-4 py-3 text-[13px]" />
+              <textarea placeholder="특이사항" value={form.special_note} onChange={e=>setForm({...form, special_note:e.target.value})} className="w-full border rounded-[10px] px-4 py-3 text-[13px] h-[80px]" />
             </div>
             <div className="mt-8 flex gap-3"><button onClick={()=>setStep(3)} className="px-6 py-3.5 rounded-full border text-[13px]">이전</button><button onClick={()=>setStep(5)} className="flex-1 bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">다음 →</button></div>
           </div>
         )}
-
         {step===5 && (
           <div className="bg-white border border-black/5 rounded-[20px] p-7">
             <h2 className="text-[18px] font-bold">약관 동의 및 최종 제출</h2>
             <div className="mt-6 space-y-3 text-[12px]">
               <label className="flex gap-2 p-3 border rounded-[12px] cursor-pointer"><input type="checkbox" checked={form.agree_terms} onChange={e=>setForm({...form, agree_terms:e.target.checked})} /> <span>[필수] <Link href="/terms" className="underline">풀필먼트 이용약관</Link> 동의</span></label>
               <label className="flex gap-2 p-3 border rounded-[12px] cursor-pointer"><input type="checkbox" checked={form.agree_privacy} onChange={e=>setForm({...form, agree_privacy:e.target.checked})} /> <span>[필수] <Link href="/privacy" className="underline">개인정보처리방침</Link> 동의</span></label>
-              <label className="flex gap-2 p-3 border border-amber-200 bg-amber-50 rounded-[12px] cursor-pointer"><input type="checkbox" checked={form.agree_privacy_collect} onChange={e=>setForm({...form, agree_privacy_collect:e.target.checked})} /> <span>[필수] 민감정보(사업자등록증, 신분증 마스킹, 통장사본) 수집·이용 동의. 보유기간: 승인 시 5년, 미승인 시 30일 후 파기.</span></label>
+              <label className="flex gap-2 p-3 border border-amber-200 bg-amber-50 rounded-[12px] cursor-pointer"><input type="checkbox" checked={form.agree_privacy_collect} onChange={e=>setForm({...form, agree_privacy_collect:e.target.checked})} /> <span>[필수] 민감정보 수집·이용 동의</span></label>
               <label className="flex gap-2 p-3 border rounded-[12px] cursor-pointer"><input type="checkbox" checked={form.agree_marketing} onChange={e=>setForm({...form, agree_marketing:e.target.checked})} /> <span>[선택] 마케팅 정보 수신 동의</span></label>
             </div>
             <div className="mt-8 flex gap-3"><button onClick={()=>setStep(4)} className="px-6 py-3.5 rounded-full border text-[13px]">이전</button><button disabled={loading} onClick={handleSubmit} className="flex-1 bg-black text-white rounded-full py-3.5 text-[13px] font-bold disabled:opacity-50">{loading ? "제출 중..." : "회원가입 신청하기 →"}</button></div>
