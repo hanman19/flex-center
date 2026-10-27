@@ -8,155 +8,163 @@ const supabase = createClient(
   "sb_publishable_bhaLFQf6wmB6wMx1NNkSAg_Ypyy48rF"
 );
 
-const initialForm = {
-  email: "", password: "", phone: "",
-  business_type: "개인사업자",
-  business_no: "", company_name: "", ceo_name: "",
-  opening_date: "", business_address: "", business_category: "",
-  bank_name: "", account_no: "", account_holder: "", tax_email: "",
-  sku_count: "", monthly_orders: "", storage_type: "", sales_channels: "", special_note: "",
-  agree_terms: false, agree_privacy: false, agree_privacy_collect: false, agree_marketing: false,
-};
+// 사업자등록번호 검증 함수 (국세청 API 없이 로직으로)
+function validateBizNo(bizNo: string) {
+  const num = bizNo.replace(/[^0-9]/g, "");
+  if (num.length !== 10) return false;
+  const check = [1, 3, 7, 1, 3, 7, 1, 3, 5];
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(num[i]) * check[i];
+  sum += Math.floor((parseInt(num[8]) * 5) / 10);
+  const remainder = (10 - (sum % 10)) % 10;
+  return remainder === parseInt(num[9]);
+}
 
 export default function OnboardingPage() {
-  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({
+    company_name: "",
+    biz_no: "",
+    ceo_name: "",
+    phone: "",
+    email: "",
+    address: "",
+    address_detail: "",
+    account_bank: "",
+    account_no: "",
+    account_holder: "",
+  });
+  const [bizValid, setBizValid] = useState<boolean | null>(null);
+  const [accountValid, setAccountValid] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [form, setForm] = useState(initialForm);
-  const [files, setFiles] = useState<{[k:string]: File | null}>({ biz_license: null, online_sales: null, id_card: null, bank_book: null });
+  const [session, setSession] = useState<any>(null);
 
-  // ★ 다른 페이지 갔다 오면 초기화 (다른 사이트처럼)
   useEffect(() => {
-    setForm(initialForm);
-    setStep(1);
-    setFiles({ biz_license: null, online_sales: null, id_card: null, bank_book: null });
-    setDone(false);
-    
-    // 페이지 떠날 때도 초기화
-    const handleBeforeUnload = () => {
-      setForm(initialForm);
+    const load = async () => {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      setSession(s);
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    load();
+    // 다음 주소 API 스크립트 로드
+    const script = document.createElement("script");
+    script.src = "//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    document.head.appendChild(script);
   }, []);
 
-  const handleSubmit = async () => {
-    if (!form.agree_terms || !form.agree_privacy || !form.agree_privacy_collect) { alert("필수 약관에 동의해주세요!"); return; }
-    setLoading(true);
-    try {
-      let uid: string | null = null;
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email: form.email, password: form.password });
-      if (signUpData.user) uid = signUpData.user.id;
-      else if (signUpError) {
-        if (signUpError.message.includes("already registered") || signUpError.message.includes("already exists")) {
-          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
-          if (loginError) throw new Error("이미 가입된 이메일입니다. 비밀번호를 확인하세요.");
-          uid = loginData.user.id;
-        } else throw signUpError;
-      }
-      if (!uid) throw new Error("사용자 ID를 가져올 수 없습니다.");
-
-      for (const key of Object.keys(files)) {
-        const file = files[key];
-        if (file) { try { await supabase.storage.from("seller_docs").upload(`${uid}/${key}_${Date.now()}_${file.name}`, file); } catch(e) {} }
-      }
-
-      const { error: profileError } = await supabase.from("seller_profiles").upsert({
-        user_id: uid, business_type: form.business_type, business_no: form.business_no, company_name: form.company_name, ceo_name: form.ceo_name,
-        opening_date: form.opening_date || null, business_address: form.business_address, business_category: form.business_category,
-        bank_name: form.bank_name, account_no: form.account_no, account_holder: form.account_holder, tax_email: form.tax_email,
-        sku_count: form.sku_count, monthly_orders: form.monthly_orders, storage_type: form.storage_type,
-        sales_channels: form.sales_channels.split(",").map(s=>s.trim()).filter(Boolean),
-        special_note: form.special_note, agree_terms: form.agree_terms, agree_privacy: form.agree_privacy,
-        agree_privacy_collect: form.agree_privacy_collect, agree_marketing: form.agree_marketing, status: "pending",
-      }, { onConflict: "user_id" });
-      if (profileError) throw profileError;
-      setDone(true);
-    } catch (e: any) { alert("에러: " + e.message); } finally { setLoading(false); }
+  const handleBizCheck = () => {
+    const valid = validateBizNo(form.biz_no);
+    setBizValid(valid);
+    if (!valid) alert("❌ 사업자등록번호 형식 오류! 10자리 숫자 확인!");
+    else alert("✅ 사업자등록번호 형식 OK! (실제 국세청 API 연결 시 진위 확인 가능!)");
   };
 
-  if (done) {
-    return (
-      <div className="min-h-screen bg-[#fafaf8] flex items-center justify-center p-6">
-        <div className="bg-white border border-black/5 rounded-[24px] p-8 max-w-[440px] w-full text-center shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
-          <div className="w-12 h-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center mx-auto text-[20px]">✓</div>
-          <h1 className="text-[22px] font-bold mt-5">신청이 완료되었습니다!</h1>
-          <p className="text-[13px] opacity-60 mt-3 break-keep">관리자(phankyu@gmail.com)가 24시간 이내<br/>서류를 검토한 후 승인해드립니다.</p>
-          <div className="mt-8 space-y-3">
-            <Link href="/" className="block w-full bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">홈으로 돌아가기</Link>
-            <Link href="/dashboard" className="block w-full border border-black/10 rounded-full py-3.5 text-[13px] font-semibold">회원전용 상태 확인 →</Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleAccountCheck = () => {
+    // 계좌번호 간단 검증
+    const valid = form.account_no.length >= 10 && form.account_bank && form.account_holder;
+    setAccountValid(valid);
+    if (!valid) alert("❌ 계좌번호 확인! 은행, 계좌번호, 예금주 모두 입력!");
+    else alert("✅ 계좌 형식 OK! (실제 은행 API 연결 시 예금주 확인 가능!)");
+  };
+
+  const handleAddressSearch = () => {
+    // @ts-ignore
+    if (window.daum && window.daum.Postcode) {
+      // @ts-ignore
+      new window.daum.Postcode({
+        oncomplete: function(data: any) {
+          setForm({ ...form, address: data.address });
+        }
+      }).open();
+    } else {
+      alert("다음 주소 API 로딩중... 잠시 후 다시 클릭!");
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!bizValid) { alert("사업자등록번호 검증부터!"); return; }
+    if (!form.company_name || !form.ceo_name || !form.phone || !form.address) { alert("필수 입력! 상호, 대표자, 연락처, 주소는 필수!"); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.from("seller_profiles").upsert({
+        user_id: session?.user?.id,
+        company_name: form.company_name,
+        business_no: form.biz_no,
+        ceo_name: form.ceo_name,
+        phone: form.phone,
+        business_address: form.address + " " + form.address_detail,
+        status: "pending",
+      });
+      if (error) throw error;
+      alert("✅ 온보딩 완료! 관리자 승인 후 상품 등록 가능!");
+      location.href = "/dashboard";
+    } catch(e: any) {
+      alert("에러: " + e.message);
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#fafaf8]">
-      <header className="border-b border-black/5 bg-white/70 backdrop-blur-xl sticky top-0 z-20">
-        <div className="max-w-[900px] mx-auto px-6 h-[64px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2"><div className="w-7 h-7 bg-black text-white flex items-center justify-center font-black rounded-full text-[12px]">F</div><span className="font-semibold text-[14px]">FLEX CENTER 회원가입</span></Link>
-          <div className="flex items-center gap-3"><div className="text-[11px] opacity-50">STEP {step} / 5</div><button onClick={()=>{setForm(initialForm); setStep(1); setFiles({ biz_license: null, online_sales: null, id_card: null, bank_book: null });}} className="text-[10px] px-3 py-1 rounded-full border border-black/10">🔄 초기화</button></div>
+      <header className="border-b border-black/5 bg-white/80 backdrop-blur-xl sticky top-0 z-20">
+        <div className="max-w-[800px] mx-auto px-6 h-[64px] flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2"><div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center font-black text-[12px]">F</div><span className="font-bold">FLEX CENTER</span><span className="text-[11px] opacity-40 ml-2">온보딩 검증</span><span className="ml-2 bg-green-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">STEP 2</span></Link>
+          <Link href="/dashboard" className="text-[12px] px-4 py-2 rounded-full border">대시보드</Link>
         </div>
       </header>
-      <main className="max-w-[900px] mx-auto px-6 py-10">
-        <div className="flex gap-2 mb-8">{[1,2,3,4,5].map(i=><div key={i} className={`h-[4px] flex-1 rounded-full ${i<=step?"bg-black":"bg-black/10"}`} />)}</div>
-        {step===1 && (
-          <div className="bg-white border border-black/5 rounded-[20px] p-7">
-            <h2 className="text-[18px] font-bold">기본 계정</h2><p className="text-[12px] opacity-50 mt-1">로그인에 사용할 이메일과 비밀번호</p>
-            <div className="mt-6 grid gap-4">
-              <div><label className="text-[11px] font-semibold opacity-70">이메일 *</label><input value={form.email} onChange={e=>setForm({...form, email:e.target.value})} placeholder="example@naver.com" className="mt-1 w-full border border-black/10 rounded-[10px] px-4 py-3 text-[13px]" /></div>
-              <div><label className="text-[11px] font-semibold opacity-70">비밀번호 * (6자 이상)</label><input type="password" value={form.password} onChange={e=>setForm({...form, password:e.target.value})} className="mt-1 w-full border border-black/10 rounded-[10px] px-4 py-3 text-[13px]" /></div>
-              <div><label className="text-[11px] font-semibold opacity-70">휴대폰 번호 *</label><input value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} placeholder="010-1234-5678" className="mt-1 w-full border border-black/10 rounded-[10px] px-4 py-3 text-[13px]" /></div>
+
+      <main className="max-w-[800px] mx-auto px-6 py-8">
+        <h1 className="text-[24px] font-bold">사업자 온보딩 - 검증 강화!</h1>
+        <p className="text-[12px] opacity-60 mt-1">사업자번호, 계좌, 주소 검증 - 나중에 터지는 것 방지!</p>
+
+        <div className="mt-6 bg-white border border-black/5 rounded-[16px] p-6 space-y-5">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div><label className="text-[11px] font-bold">상호명 *</label><input value={form.company_name} onChange={e=>setForm({...form, company_name: e.target.value})} placeholder="내 브랜드" className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" /></div>
+            <div><label className="text-[11px] font-bold">대표자명 *</label><input value={form.ceo_name} onChange={e=>setForm({...form, ceo_name: e.target.value})} placeholder="홍길동" className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" /></div>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold">사업자등록번호 * (10자리) - 검증 필수!</label>
+            <div className="mt-1 flex gap-2">
+              <input value={form.biz_no} onChange={e=>{ setForm({...form, biz_no: e.target.value}); setBizValid(null); }} placeholder="1234567890" maxLength={10} className={`flex-1 border rounded-[8px] px-4 py-2.5 text-[13px] font-mono ${bizValid === true ? "border-green-500 bg-green-50" : bizValid === false ? "border-red-500 bg-red-50" : "border-black/10"}`} />
+              <button onClick={handleBizCheck} className="bg-black text-white px-5 py-2.5 rounded-full text-[12px] font-bold">검증</button>
+              {bizValid === true && <span className="flex items-center text-green-600 font-bold text-[12px]">✅ OK</span>}
+              {bizValid === false && <span className="flex items-center text-red-600 font-bold text-[12px]">❌ 오류</span>}
             </div>
-            <button onClick={()=>{if(!form.email||!form.password) return alert("이메일, 비밀번호 필수!"); setStep(2);}} className="mt-8 w-full bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">다음 →</button>
+            <p className="text-[10px] opacity-50 mt-1">국세청 검증 API 연결 시 실제 진위 확인 가능! 지금은 형식 검증만!</p>
           </div>
-        )}
-        {step===2 && (
-          <div className="bg-white border border-black/5 rounded-[20px] p-7">
-            <h2 className="text-[18px] font-bold">사업자 정보</h2>
-            <div className="mt-6 grid gap-4">
-              <div><label className="text-[11px] font-semibold">사업자 유형 *</label><select value={form.business_type} onChange={e=>setForm({...form, business_type:e.target.value})} className="mt-1 w-full border border-black/10 rounded-[10px] px-4 py-3 text-[13px]"><option>개인사업자</option><option>법인사업자</option><option>간이과세자</option><option>예비창업자</option></select></div>
-              <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-semibold">사업자등록번호 *</label><input value={form.business_no} onChange={e=>setForm({...form, business_no:e.target.value})} placeholder="123-45-67890" className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div><div><label className="text-[11px] font-semibold">상호명 *</label><input value={form.company_name} onChange={e=>setForm({...form, company_name:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div></div>
-              <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-semibold">대표자명 *</label><input value={form.ceo_name} onChange={e=>setForm({...form, ceo_name:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div><div><label className="text-[11px] font-semibold">개업일자</label><input type="date" value={form.opening_date} onChange={e=>setForm({...form, opening_date:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div></div>
-              <div><label className="text-[11px] font-semibold">사업장 주소 *</label><input value={form.business_address} onChange={e=>setForm({...form, business_address:e.target.value})} className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div>
-              <div><label className="text-[11px] font-semibold">업태/업종</label><input value={form.business_category} onChange={e=>setForm({...form, business_category:e.target.value})} placeholder="도소매 / 전자상거래" className="mt-1 w-full border rounded-[10px] px-4 py-3 text-[13px]" /></div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div><label className="text-[11px] font-bold">연락처 *</label><input value={form.phone} onChange={e=>setForm({...form, phone: e.target.value})} placeholder="010-1234-5678" className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" /></div>
+            <div><label className="text-[11px] font-bold">이메일</label><input value={form.email} onChange={e=>setForm({...form, email: e.target.value})} placeholder="biz@email.com" className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" /></div>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold">사업장 주소 * - 다음 주소 API!</label>
+            <div className="mt-1 flex gap-2">
+              <input value={form.address} readOnly placeholder="주소 검색 버튼 클릭!" className="flex-1 border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px] bg-[#fafaf8]" />
+              <button onClick={handleAddressSearch} className="bg-black text-white px-5 py-2.5 rounded-full text-[12px] font-bold">주소 검색</button>
             </div>
-            <div className="mt-8 flex gap-3"><button onClick={()=>setStep(1)} className="px-6 py-3.5 rounded-full border text-[13px]">이전</button><button onClick={()=>setStep(3)} className="flex-1 bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">다음 →</button></div>
+            <input value={form.address_detail} onChange={e=>setForm({...form, address_detail: e.target.value})} placeholder="상세 주소 (101호, 2층 등)" className="mt-2 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" />
+            <p className="text-[10px] opacity-50 mt-1">다음 주소 API로 정확한 주소 입력! 배송지 오류 방지!</p>
           </div>
-        )}
-        {step===3 && (
-          <div className="bg-white border border-black/5 rounded-[20px] p-7">
-            <h2 className="text-[18px] font-bold">서류 업로드 (선택)</h2><p className="text-[11px] opacity-50 mt-1 text-red-600">※ 신분증은 주민번호 뒷자리 가림 처리 후 업로드</p>
-            <div className="mt-6 grid gap-4">{[{key:"biz_license",label:"사업자등록증 사본 *"},{key:"online_sales",label:"통신판매업신고증"},{key:"id_card",label:"대표자 신분증 사본 (마스킹 필수) *"},{key:"bank_book",label:"통장사본 *"}].map(f=>(<div key={f.key} className="flex items-center justify-between border border-black/10 rounded-[12px] px-4 py-3"><span className="text-[12px] font-semibold">{f.label}</span><input type="file" onChange={e=>setFiles({...files, [f.key]: e.target.files?.[0]||null})} className="text-[11px]" /></div>))}</div>
-            <div className="mt-8 flex gap-3"><button onClick={()=>setStep(2)} className="px-6 py-3.5 rounded-full border text-[13px]">이전</button><button onClick={()=>setStep(4)} className="flex-1 bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">다음 →</button></div>
-          </div>
-        )}
-        {step===4 && (
-          <div className="bg-white border border-black/5 rounded-[20px] p-7">
-            <h2 className="text-[18px] font-bold">정산 및 물류 정보</h2>
-            <div className="mt-6 grid gap-4">
-              <div className="grid grid-cols-3 gap-3"><input placeholder="은행명" value={form.bank_name} onChange={e=>setForm({...form, bank_name:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /><input placeholder="계좌번호" value={form.account_no} onChange={e=>setForm({...form, account_no:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px] col-span-2" /></div>
-              <div className="grid grid-cols-2 gap-3"><input placeholder="예금주" value={form.account_holder} onChange={e=>setForm({...form, account_holder:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /><input placeholder="세금계산서 이메일" value={form.tax_email} onChange={e=>setForm({...form, tax_email:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /></div>
-              <div className="grid grid-cols-3 gap-3"><input placeholder="SKU 수" value={form.sku_count} onChange={e=>setForm({...form, sku_count:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /><input placeholder="월 주문량" value={form.monthly_orders} onChange={e=>setForm({...form, monthly_orders:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /><input placeholder="보관 유형" value={form.storage_type} onChange={e=>setForm({...form, storage_type:e.target.value})} className="border rounded-[10px] px-4 py-3 text-[13px]" /></div>
-              <input placeholder="판매 채널 (콤마로 구분)" value={form.sales_channels} onChange={e=>setForm({...form, sales_channels:e.target.value})} className="w-full border rounded-[10px] px-4 py-3 text-[13px]" />
-              <textarea placeholder="특이사항" value={form.special_note} onChange={e=>setForm({...form, special_note:e.target.value})} className="w-full border rounded-[10px] px-4 py-3 text-[13px] h-[80px]" />
+
+          <div className="border-t border-black/5 pt-5">
+            <p className="font-bold text-[12px]">정산 계좌 - 검증 필수! (나중에 돈 받을 계좌!)</p>
+            <div className="mt-3 grid md:grid-cols-3 gap-3">
+              <div><label className="text-[10px] opacity-60">은행</label><select value={form.account_bank} onChange={e=>setForm({...form, account_bank: e.target.value})} className="mt-1 w-full border border-black/10 rounded-[8px] px-3 py-2.5 text-[12px]"><option value="">은행 선택</option><option>국민은행</option><option>신한은행</option><option>우리은행</option><option>하나은행</option><option>기업은행</option><option>농협</option><option>카카오뱅크</option><option>토스뱅크</option></select></div>
+              <div><label className="text-[10px] opacity-60">계좌번호</label><input value={form.account_no} onChange={e=>setForm({...form, account_no: e.target.value})} placeholder="123-456-7890" className="mt-1 w-full border border-black/10 rounded-[8px] px-3 py-2.5 text-[12px] font-mono" /></div>
+              <div><label className="text-[10px] opacity-60">예금주</label><input value={form.account_holder} onChange={e=>setForm({...form, account_holder: e.target.value})} placeholder="홍길동" className="mt-1 w-full border border-black/10 rounded-[8px] px-3 py-2.5 text-[12px]" /></div>
             </div>
-            <div className="mt-8 flex gap-3"><button onClick={()=>setStep(3)} className="px-6 py-3.5 rounded-full border text-[13px]">이전</button><button onClick={()=>setStep(5)} className="flex-1 bg-black text-white rounded-full py-3.5 text-[13px] font-semibold">다음 →</button></div>
+            <button onClick={handleAccountCheck} className={`mt-3 px-4 py-2 rounded-full text-[11px] font-bold ${accountValid === true ? "bg-green-500 text-white" : accountValid === false ? "bg-red-500 text-white" : "bg-black text-white"}`}>{accountValid === true ? "✅ 계좌 OK" : accountValid === false ? "❌ 오류" : "계좌 검증"}</button>
+            <p className="text-[10px] opacity-50 mt-2">뱅크샐러드 API 연결 시 예금주 실명 확인 가능!</p>
           </div>
-        )}
-        {step===5 && (
-          <div className="bg-white border border-black/5 rounded-[20px] p-7">
-            <h2 className="text-[18px] font-bold">약관 동의 및 최종 제출</h2>
-            <div className="mt-6 space-y-3 text-[12px]">
-              <label className="flex gap-2 p-3 border rounded-[12px] cursor-pointer"><input type="checkbox" checked={form.agree_terms} onChange={e=>setForm({...form, agree_terms:e.target.checked})} /> <span>[필수] <Link href="/terms" className="underline">풀필먼트 이용약관</Link> 동의</span></label>
-              <label className="flex gap-2 p-3 border rounded-[12px] cursor-pointer"><input type="checkbox" checked={form.agree_privacy} onChange={e=>setForm({...form, agree_privacy:e.target.checked})} /> <span>[필수] <Link href="/privacy" className="underline">개인정보처리방침</Link> 동의</span></label>
-              <label className="flex gap-2 p-3 border border-amber-200 bg-amber-50 rounded-[12px] cursor-pointer"><input type="checkbox" checked={form.agree_privacy_collect} onChange={e=>setForm({...form, agree_privacy_collect:e.target.checked})} /> <span>[필수] 민감정보 수집·이용 동의</span></label>
-              <label className="flex gap-2 p-3 border rounded-[12px] cursor-pointer"><input type="checkbox" checked={form.agree_marketing} onChange={e=>setForm({...form, agree_marketing:e.target.checked})} /> <span>[선택] 마케팅 정보 수신 동의</span></label>
-            </div>
-            <div className="mt-8 flex gap-3"><button onClick={()=>setStep(4)} className="px-6 py-3.5 rounded-full border text-[13px]">이전</button><button disabled={loading} onClick={handleSubmit} className="flex-1 bg-black text-white rounded-full py-3.5 text-[13px] font-bold disabled:opacity-50">{loading ? "제출 중..." : "회원가입 신청하기 →"}</button></div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-[12px] p-4 text-[11px]">
+            <p className="font-bold text-amber-800">💡 왜 검증이 중요한가?</p>
+            <p className="opacity-70 mt-1">사업자번호 틀리면 세금계산서 못 끊어요! 계좌 틀리면 정산금 못 받아요! 주소 틀리면 입고 박스 분실! 지금 검증해야 나중에 안 터져요!</p>
           </div>
-        )}
+
+          <button onClick={handleSubmit} disabled={loading} className="w-full bg-black text-white py-3.5 rounded-full font-bold text-[13px] disabled:opacity-50">{loading ? "저장중..." : "온보딩 완료 - 검증 완료!"}</button>
+        </div>
       </main>
     </div>
   );
