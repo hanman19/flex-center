@@ -23,16 +23,12 @@ export default function WMSPage() {
       const { data: { session: s } } = await supabase.auth.getSession();
       setSession(s);
       if (!s) { setLoading(false); return; }
-
       const { data: prof } = await supabase.from("seller_profiles").select("*").eq("user_id", s.user.id).maybeSingle();
       setProfile(prof);
-
-      // 실제 inventory 테이블이 있으면 가져오고, 없으면 샘플 보여주기
       try {
         const { data: inv } = await supabase.from("seller_inventory").select("*").eq("seller_id", s.user.id);
         if (inv && inv.length > 0) setInventory(inv);
         else {
-          // 샘플 데이터 - 셀러용이니까 내 재고만
           setInventory([
             { id: "1", sku: "EAR-001", product_name: "무선 이어폰", qty: 150, location: "A-01-02", box_count: 3, inbound_date: "2024-10-20", status: "보관중" },
             { id: "2", sku: "WATCH-02", product_name: "스마트 워치", qty: 45, location: "B-02-05", box_count: 1, inbound_date: "2024-10-22", status: "보관중" },
@@ -40,9 +36,8 @@ export default function WMSPage() {
           ]);
         }
         const { data: ord } = await supabase.from("orders").select("*").eq("seller_id", s.user.id).order("created_at", { ascending: false }).limit(20);
-        if (ord) {
-          setOutbounds(ord);
-        } else {
+        if (ord) setOutbounds(ord);
+        else {
           setOutbounds([
             { id: "1", platform_order_id: "20241027-001", product_name: "무선 이어폰", qty: 2, status: "출고완료", invoice: "CJ1234567890", created_at: new Date().toISOString() },
             { id: "2", platform_order_id: "C-20241027-002", product_name: "스마트 워치", qty: 1, status: "피킹중", invoice: "", created_at: new Date().toISOString() },
@@ -54,14 +49,16 @@ export default function WMSPage() {
     load();
   }, []);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-[13px]">
-      <TopNav />내 창고 불러오는 중...</div>;
+  if (loading) return <div className="min-h-screen bg-[#fafaf8]"><TopNav /><div className="flex items-center justify-center h-[80vh] text-[13px]">내 창고 불러오는 중...</div></div>;
 
   if (!session) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafaf8]">
-        <p className="text-[14px]">로그인이 필요합니다</p>
-        <Link href="/login" className="mt-4 bg-black text-white px-6 py-3 rounded-full text-[13px]">로그인하러 가기</Link>
+      <div className="min-h-screen bg-[#fafaf8]">
+        <TopNav />
+        <div className="flex flex-col items-center justify-center h-[80vh]">
+          <p className="text-[14px]">로그인이 필요합니다</p>
+          <Link href="/login" className="mt-4 bg-black text-white px-6 py-3 rounded-full text-[13px]">로그인하러 가기</Link>
+        </div>
       </div>
     )
   }
@@ -71,13 +68,7 @@ export default function WMSPage() {
 
   return (
     <div className="min-h-screen bg-[#fafaf8]">
-      <header className="border-b border-black/5 bg-white/80 backdrop-blur-xl sticky top-0 z-20">
-        <div className="max-w-[1200px] mx-auto px-6 h-[64px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2"><div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center font-black text-[12px]">F</div><span className="font-bold">FLEX CENTER</span><span className="text-[11px] opacity-40 ml-2">내 창고 - FLEX LITE</span></Link>
-          <div className="flex gap-2"><Link href="/dashboard" className="text-[12px] px-4 py-2 rounded-full border">회원전용</Link><Link href="/orders" className="text-[12px] px-4 py-2 rounded-full border">주문관리</Link></div>
-        </div>
-      </header>
-
+      <TopNav />
       <main className="max-w-[1200px] mx-auto px-6 py-8">
         <div className="flex items-start justify-between">
           <div>
@@ -156,4 +147,3 @@ export default function WMSPage() {
     </div>
   );
 }
-
