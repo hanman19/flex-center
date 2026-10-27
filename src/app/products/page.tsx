@@ -2,214 +2,154 @@
 import TopNav from "@/components/TopNav";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
-import Link from "next/link";
 
 const supabase = createClient(
-  "https://qkpnvfmsmvcemdblaahl.supabase.co",
-  "sb_publishable_bhaLFQf6wmB6wMx1NNkSAg_Ypyy48rF"
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "placeholder-key"
 );
 
-type Product = {
-  id: string;
-  sku: string;
-  barcode: string;
-  product_name: string;
-  category: string;
-  weight: number;
-  width: number;
-  height: number;
-  depth: number;
-  price: number;
-  stock: number;
-  location: string;
-};
-
-type Bundle = {
-  id: string;
-  bundle_sku: string;
-  bundle_name: string;
-  components: { sku: string; qty: number; product_name: string }[];
-  price: number;
-};
-
-const mockProducts: Product[] = [
-  { id: "1", sku: "EAR-001", barcode: "880123456001", product_name: "무선 이어폰 Pro", category: "전자기기", weight: 0.15, width: 10, height: 8, depth: 4, price: 59000, stock: 150, location: "A-01-02" },
-  { id: "2", sku: "WATCH-02", barcode: "880123456002", product_name: "스마트 워치", category: "전자기기", weight: 0.2, width: 12, height: 12, depth: 6, price: 129000, stock: 45, location: "B-02-05" },
-  { id: "3", sku: "CASE-04", barcode: "880123456003", product_name: "에어팟 케이스", category: "액세서리", weight: 0.05, width: 6, height: 6, depth: 3, price: 15000, stock: 320, location: "A-01-03" },
-  { id: "4", sku: "COS-001", barcode: "880123456004", product_name: "에센스 100ml", category: "화장품", weight: 0.3, width: 8, height: 15, depth: 8, price: 45000, stock: 200, location: "A-02-01" },
-  { id: "5", sku: "KPOP-001", barcode: "880123456005", product_name: "K-pop 앨범 (포토카드 포함)", category: "K-pop 굿즈", weight: 0.4, width: 20, height: 20, depth: 2, price: 25000, stock: 100, location: "A-03-01" },
-];
-
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [bundles, setBundles] = useState<Bundle[]>([
-    { id: "1", bundle_sku: "SET-001", bundle_name: "이어폰 + 케이스 세트", components: [{ sku: "EAR-001", qty: 1, product_name: "무선 이어폰 Pro" }, { sku: "CASE-04", qty: 1, product_name: "에어팟 케이스" }], price: 69000 },
-  ]);
-  const [tab, setTab] = useState<"list" | "add" | "bundle" | "upload">("list");
-  const [form, setForm] = useState<Partial<Product>>({ sku: "", barcode: "", product_name: "", category: "전자기기", weight: 0.15, width: 10, height: 8, depth: 4, price: 0, stock: 0, location: "" });
-  const [bundleForm, setBundleForm] = useState({ bundle_sku: "", bundle_name: "", price: 0 });
-  const [selectedSkus, setSelectedSkus] = useState<{ sku: string; qty: number }[]>([]);
+export default function ProductsProPage() {
+  const [products, setProducts] = useState<any[]>([]);
+  const [sku, setSku] = useState(""); const [name, setName] = useState(""); const [barcode, setBarcode] = useState(""); const [weight, setWeight] = useState(""); const [location, setLocation] = useState("A-01-01"); const [isSample, setIsSample] = useState(false);
+  const [excelData, setExcelData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
-      const { data: { session: s } } = await supabase.auth.getSession();
-      try {
-        const { data } = await supabase.from("products").select("*").eq("seller_id", s?.user?.id);
-        if (data && data.length > 0) setProducts(data);
-      } catch(e) {}
-    };
-    load();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      const { data } = await supabase.from("products").select("*").eq("seller_id", user.id).order("created_at", { ascending: false });
+      if (data && data.length > 0) setProducts(data);
+      else setProducts([
+        { id: "1", sku: "EAR-001", product_name: "무선 이어폰", barcode: "880123456", weight: 150, location: "A-01-02", is_sample: false, safety_stock: 10 },
+        { id: "2", sku: "SAMPLE-PC-01", product_name: "포토카드 랜덤", barcode: "", weight: 10, location: "S-01", is_sample: true, safety_stock: 0 },
+      ]);
+      setLoading(false);
+    }; load();
   }, []);
 
-  const handleAddProduct = () => {
-    if (!form.sku || !form.product_name) { alert("SKU와 상품명은 필수!"); return; }
-    const newProduct: Product = { id: Date.now().toString(), sku: form.sku!, barcode: form.barcode || "", product_name: form.product_name!, category: form.category || "전자기기", weight: form.weight || 0, width: form.width || 0, height: form.height || 0, depth: form.depth || 0, price: form.price || 0, stock: form.stock || 0, location: form.location || "" };
-    setProducts([...products, newProduct]);
-    setForm({ sku: "", barcode: "", product_name: "", category: "전자기기", weight: 0.15, width: 10, height: 8, depth: 4, price: 0, stock: 0, location: "" });
-    setTab("list");
-    alert(`상품 등록 완료! ${newProduct.product_name}\n이제 WMS에서 ${newProduct.location}에서 피킹 가능!`);
+  const addSingle = async () => {
+    if (!sku || !name) { alert("SKU, 상품명 필수"); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    const row = { seller_id: user?.id, sku, product_name: name, barcode, weight: Number(weight)||0, location, is_sample: isSample, safety_stock: 10 };
+    setProducts([row as any, ...products]);
+    try { await supabase.from("products").insert(row); } catch(e){}
+    setSku(""); setName(""); setBarcode(""); setWeight(""); setLocation("A-01-01"); setIsSample(false);
   };
 
-  const handleCreateBundle = () => {
-    if (selectedSkus.length < 2) { alert("세트 상품은 2개 이상 상품을 선택해야 해요!"); return; }
-    if (!bundleForm.bundle_sku || !bundleForm.bundle_name) { alert("세트 SKU와 세트명은 필수!"); return; }
-    const components = selectedSkus.map(s => {
-      const p = products.find(prod => prod.sku === s.sku);
-      return { sku: s.sku, qty: s.qty, product_name: p?.product_name || s.sku };
-    });
-    const newBundle: Bundle = { id: Date.now().toString(), bundle_sku: bundleForm.bundle_sku, bundle_name: bundleForm.bundle_name, components, price: bundleForm.price };
-    setBundles([...bundles, newBundle]);
-    setBundleForm({ bundle_sku: "", bundle_name: "", price: 0 });
-    setSelectedSkus([]);
-    alert(`세트 상품 생성 완료! ${newBundle.bundle_name}\n구성: ${components.map(c=>`${c.product_name} x${c.qty}`).join(", ")}`);
+  const handleExcel = async (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const XLSX = await import("xlsx");
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const wb = XLSX.read(bstr, { type: "binary" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws);
+      // 예상 컬럼: sku, product_name, barcode, weight, location, is_sample, safety_stock, option_data
+      const mapped = (data as any[]).map((r: any) => ({
+        sku: r.sku || r.SKU || r["상품코드"] || "",
+        product_name: r.product_name || r["상품명"] || r["상품명*"] || "",
+        barcode: r.barcode || r["바코드"] || "",
+        weight: Number(r.weight || r["중량"] || r["중량(g)"] || 0),
+        location: r.location || r["위치"] || "A-01-01",
+        is_sample: String(r.is_sample || r["샘플여부"] || "N").toUpperCase() === "Y" || r.is_sample === true,
+        safety_stock: Number(r.safety_stock || r["안전재고"] || 10),
+        option_data: r.option_data || r["옵션"] || "",
+      })).filter((r: any) => r.sku && r.product_name);
+      setExcelData(mapped);
+    };
+    reader.readAsBinaryString(file);
   };
+
+  const uploadBulk = async () => {
+    if (excelData.length === 0) return;
+    setUploading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const rows = excelData.map(r => ({ ...r, seller_id: user?.id }));
+    setProducts([...rows as any[], ...products]);
+    try {
+      const { error } = await supabase.from("products").insert(rows);
+      if (error) throw error;
+      alert(`${rows.length}개 상품 일괄 등록 완료!`);
+      setExcelData([]);
+    } catch(e: any) {
+      alert("일괄 등록 실패: " + e.message + " - 중복 SKU 확인!");
+    }
+    setUploading(false);
+  };
+
+  const downloadTemplate = async () => {
+    const XLSX = await import("xlsx");
+    const template = [
+      { sku: "EAR-001", product_name: "무선 이어폰", barcode: "8801234567890", weight: 150, location: "A-01-02", is_sample: "N", safety_stock: 10, option_data: "블랙" },
+      { sku: "EAR-002", product_name: "무선 이어폰 화이트", barcode: "8801234567891", weight: 150, location: "A-01-03", is_sample: "N", safety_stock: 10, option_data: "화이트" },
+      { sku: "SAMPLE-01", product_name: "포토카드 랜덤", barcode: "", weight: 10, location: "S-01", is_sample: "Y", safety_stock: 0, option_data: "" },
+    ];
+    const ws = XLSX.utils.json_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "상품마스터");
+    XLSX.writeFile(wb, "FLEX_CENTER_상품마스터_템플릿.xlsx");
+  };
+
+  if (loading) return <div className="min-h-screen bg-[#fafaf8]"><TopNav /><div className="flex items-center justify-center h-[80vh]">로딩중...</div></div>;
 
   return (
     <div className="min-h-screen bg-[#fafaf8]">
       <TopNav />
-      <header className="border-b border-black/5 bg-white/80 backdrop-blur-xl sticky top-0 z-20">
-        <div className="max-w-[1200px] mx-auto px-6 h-[64px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2"><div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center font-black text-[12px]">F</div><span className="font-bold">FLEX CENTER</span><span className="text-[11px] opacity-40 ml-2">상품 마스터</span><span className="ml-2 bg-green-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">PHASE 1</span></Link>
-          <div className="flex gap-2"><Link href="/wms" className="text-[12px] px-4 py-2 rounded-full border">내 창고 WMS</Link><Link href="/admin/wms" className="text-[12px] px-4 py-2 rounded-full bg-black text-white">작업자 WMS Pro</Link><Link href="/orders" className="text-[12px] px-4 py-2 rounded-full border">주문관리</Link></div>
-        </div>
-      </header>
-
-      <main className="max-w-[1200px] mx-auto px-6 py-6">
+      <main className="max-w-[1400px] mx-auto px-6 py-6">
         <div className="flex items-start justify-between">
-          <div><h1 className="text-[28px] font-bold tracking-tight">상품 마스터 (Product Master)</h1><p className="text-[13px] opacity-60 mt-1">사방넷처럼! 상품 정보 한 번 입력하면 WMS, 샘플, 세트, 플랫폼 업로드까지 다 연결!</p></div>
-          <div className="bg-black text-white rounded-[12px] px-4 py-2 text-[11px]">총 {products.length}개 SKU / {bundles.length}개 세트</div>
+          <div>
+            <h1 className="text-[28px] font-black">상품 마스터 Pro</h1>
+            <p className="text-[13px] opacity-60 mt-1">SKU, 바코드, 중량, 위치, 샘플, 안전재고, 옵션 - 모든 상품의 원장. 엑셀 일괄 업로드 지원!</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={downloadTemplate} className="bg-white border border-black/10 px-4 py-2 rounded-full text-[12px] font-bold">📥 템플릿 다운로드</button>
+            <label className="bg-black text-white px-4 py-2 rounded-full text-[12px] font-bold cursor-pointer">📤 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcel} className="hidden" /></label>
+          </div>
         </div>
 
-        <div className="mt-6 flex gap-2">
-          <button onClick={()=>setTab("list")} className={`px-5 py-2.5 rounded-full text-[12px] font-bold border ${tab==="list" ? "bg-black text-white border-black" : "bg-white border-black/10"}`}>내 상품 목록 ({products.length})</button>
-          <button onClick={()=>setTab("add")} className={`px-5 py-2.5 rounded-full text-[12px] font-bold border ${tab==="add" ? "bg-black text-white border-black" : "bg-white border-black/10"}`}>+ 상품 등록</button>
-          <button onClick={()=>setTab("bundle")} className={`px-5 py-2.5 rounded-full text-[12px] font-bold border ${tab==="bundle" ? "bg-amber-400 text-black border-amber-400" : "bg-white border-black/10"}`}>세트 상품 만들기 ({bundles.length})</button>
-          <button onClick={()=>setTab("upload")} className={`px-5 py-2.5 rounded-full text-[12px] font-bold border ${tab==="upload" ? "bg-black text-white border-black" : "bg-white border-black/10"}`}>플랫폼 업로드 (사방넷)</button>
+        {excelData.length > 0 && (
+          <div className="mt-6 bg-[#FFC61A] border border-black rounded-[16px] p-6">
+            <h3 className="font-black text-[14px]">엑셀 미리보기 - {excelData.length}개 상품</h3>
+            <p className="text-[11px] opacity-60 mt-1">아래 내용이 맞으면 일괄 등록 버튼을 눌러!</p>
+            <div className="mt-4 bg-white rounded-[12px] overflow-hidden max-h-[300px] overflow-y-auto">
+              <table className="w-full text-[11px]"><thead className="bg-[#fafaf8] sticky top-0"><tr><th className="text-left py-2 px-3">SKU</th><th className="text-left">상품명</th><th>바코드</th><th>중량</th><th>위치</th><th>샘플</th><th>안전재고</th></tr></thead>
+                <tbody>{excelData.slice(0,50).map((r,i)=><tr key={i} className="border-b"><td className="py-2 px-3 font-mono">{r.sku}</td><td>{r.product_name}</td><td className="text-center">{r.barcode}</td><td className="text-center">{r.weight}g</td><td className="text-center">{r.location}</td><td className="text-center">{r.is_sample ? "Y" : "N"}</td><td className="text-center">{r.safety_stock}</td></tr>)}</tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex gap-2"><button onClick={uploadBulk} disabled={uploading} className="bg-black text-white px-6 py-3 rounded-full font-bold text-[13px]">{uploading ? "업로드중..." : `${excelData.length}개 일괄 등록!`}</button><button onClick={()=>setExcelData([])} className="bg-white border border-black px-6 py-3 rounded-full font-bold text-[13px]">취소</button></div>
+          </div>
+        )}
+
+        <div className="mt-6 bg-white border border-black/5 rounded-[16px] p-6">
+          <h3 className="font-bold text-[14px]">단건 등록</h3>
+          <div className="mt-4 grid grid-cols-7 gap-2">
+            <input value={sku} onChange={e=>setSku(e.target.value)} placeholder="SKU*" className="border border-black/10 rounded-full px-3 py-2.5 text-[12px]" />
+            <input value={name} onChange={e=>setName(e.target.value)} placeholder="상품명*" className="border border-black/10 rounded-full px-3 py-2.5 text-[12px]" />
+            <input value={barcode} onChange={e=>setBarcode(e.target.value)} placeholder="바코드" className="border border-black/10 rounded-full px-3 py-2.5 text-[12px]" />
+            <input value={weight} onChange={e=>setWeight(e.target.value)} placeholder="중량(g)" className="border border-black/10 rounded-full px-3 py-2.5 text-[12px]" />
+            <input value={location} onChange={e=>setLocation(e.target.value)} placeholder="위치" className="border border-black/10 rounded-full px-3 py-2.5 text-[12px]" />
+            <label className="flex items-center gap-1 text-[11px]"><input type="checkbox" checked={isSample} onChange={e=>setIsSample(e.target.checked)} />샘플</label>
+            <button onClick={addSingle} className="bg-black text-white rounded-full py-2.5 text-[12px] font-bold">+ 등록</button>
+          </div>
+          <p className="text-[10px] opacity-40 mt-3">* SKU는 플랫폼 SKU와 동일해야 자동 매칭. 바코드 없으면 SKU로 피킹. 샘플 체크하면 주문시 자동 추가. 안전재고 10개 이하면 카톡 알림!</p>
         </div>
 
-        {tab==="list" && (
-          <div className="mt-6 bg-white border border-black/5 rounded-[16px] overflow-hidden">
-            <div className="px-6 py-4 border-b border-black/5 flex items-center justify-between"><h3 className="font-bold text-[14px]">내 상품 마스터 - WMS, 샘플, 세트, 플랫폼 업로드의 기초!</h3><span className="text-[11px] opacity-50">이 정보로 박스 추천, 바코드 스캔, 피킹 다 됨!</span></div>
-            <table className="w-full text-[12px]">
-              <thead className="bg-[#fafaf8] text-[10px] opacity-60 border-b border-black/5"><tr><th className="text-left py-3 px-6">SKU / 바코드 / 상품명</th><th className="text-center">카테고리</th><th className="text-center">무게 / 크기</th><th className="text-center">가격 / 재고</th><th className="text-center">선반 위치</th><th className="text-center">액션</th></tr></thead>
-              <tbody>
-                {products.map(p => (
-                  <tr key={p.id} className="border-b border-black/[0.03] hover:bg-[#fafaf8]">
-                    <td className="py-4 px-6"><p className="font-mono font-bold text-[11px] bg-black text-white px-2 py-0.5 rounded-full inline-block">{p.sku}</p><p className="font-mono text-[10px] opacity-40 mt-1">{p.barcode}</p><p className="font-bold text-[13px] mt-1">{p.product_name}</p></td>
-                    <td className="text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${p.category==="화장품" ? "bg-pink-100 text-pink-700" : p.category==="K-pop 굿즈" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>{p.category}</span></td>
-                    <td className="text-center"><p className="font-mono">{p.weight}kg</p><p className="text-[10px] opacity-50">{p.width}x{p.height}x{p.depth}mm</p></td>
-                    <td className="text-center"><p className="font-bold">{p.price.toLocaleString()}원</p><p className={`text-[11px] ${p.stock < 50 ? "text-red-500 font-bold" : "opacity-60"}`}>{p.stock}개 {p.stock < 50 && "(부족!)"}</p></td>
-                    <td className="text-center"><span className="font-mono bg-black text-white px-2 py-1 rounded text-[11px]">{p.location}</span></td>
-                    <td className="text-center"><button className="text-[10px] px-2 py-1 rounded-full border">수정</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="mt-6 bg-white border border-black/5 rounded-[16px] overflow-hidden">
+          <div className="px-6 py-4 border-b flex items-center justify-between"><h3 className="font-bold text-[14px]">내 상품 {products.length}개</h3><span className="text-[11px] opacity-50">SKU 중복 불가 - 중복이면 업데이트</span></div>
+          <table className="w-full text-[12px]">
+            <thead className="bg-[#fafaf8] text-[10px] opacity-60 border-b"><tr><th className="text-left py-3 px-6">SKU / 상품 / 옵션</th><th className="text-center">바코드</th><th className="text-center">중량</th><th className="text-center">위치</th><th className="text-center">안전재고</th><th className="text-center">구분</th></tr></thead>
+            <tbody>{products.map(p=><tr key={p.id || p.sku} className="border-b border-black/[0.03] hover:bg-[#fafaf8]"><td className="py-4 px-6"><p className="font-bold">{p.product_name}</p><p className="font-mono text-[10px] opacity-50">{p.sku} {p.option_data && `· ${p.option_data}`}</p></td><td className="text-center font-mono">{p.barcode || "-"}</td><td className="text-center">{p.weight}g</td><td className="text-center"><span className="bg-black text-white px-2 py-1 rounded-full text-[10px]">{p.location}</span></td><td className="text-center">{p.safety_stock || 10}개</td><td className="text-center">{p.is_sample ? <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-[10px] font-bold">샘플</span> : <span className="bg-gray-100 px-2 py-1 rounded-full text-[10px]">일반</span>}</td></tr>)}</tbody>
+          </table>
+        </div>
 
-        {tab==="add" && (
-          <div className="mt-6 bg-white border border-black/5 rounded-[16px] p-6">
-            <h3 className="font-bold text-[16px]">상품 등록 - 기초 공사! 이 정보로 모든 게 돌아가요!</h3>
-            <div className="mt-6 grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div><label className="text-[11px] font-bold opacity-60">SKU (필수) - WMS 피킹에서 사용</label><input value={form.sku} onChange={e=>setForm({...form, sku: e.target.value.toUpperCase()})} placeholder="예: EAR-001" className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px] font-mono" /></div>
-                <div><label className="text-[11px] font-bold opacity-60">바코드 (필수) - PDA, 핸드폰 카메라로 스캔</label><input value={form.barcode} onChange={e=>setForm({...form, barcode: e.target.value})} placeholder="예: 8801234567890" className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px] font-mono" /></div>
-                <div><label className="text-[11px] font-bold opacity-60">상품명 (필수)</label><input value={form.product_name} onChange={e=>setForm({...form, product_name: e.target.value})} placeholder="예: 무선 이어폰 Pro" className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" /></div>
-                <div><label className="text-[11px] font-bold opacity-60">카테고리</label><select value={form.category} onChange={e=>setForm({...form, category: e.target.value})} className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]"><option>전자기기</option><option>액세서리</option><option>화장품</option><option>K-pop 굿즈</option><option>의류</option><option>식품</option></select></div>
-              </div>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[11px] font-bold opacity-60">무게 (kg) - 박스 추천에 사용</label><input type="number" step="0.01" value={form.weight} onChange={e=>setForm({...form, weight: parseFloat(e.target.value) || 0})} className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" /></div>
-                  <div><label className="text-[11px] font-bold opacity-60">가격 (원)</label><input type="number" value={form.price} onChange={e=>setForm({...form, price: parseInt(e.target.value) || 0})} className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" /></div>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div><label className="text-[11px] font-bold opacity-60">가로 (mm)</label><input type="number" value={form.width} onChange={e=>setForm({...form, width: parseInt(e.target.value) || 0})} className="mt-1 w-full border border-black/10 rounded-[8px] px-3 py-2 text-[13px]" /></div>
-                  <div><label className="text-[11px] font-bold opacity-60">세로 (mm)</label><input type="number" value={form.height} onChange={e=>setForm({...form, height: parseInt(e.target.value) || 0})} className="mt-1 w-full border border-black/10 rounded-[8px] px-3 py-2 text-[13px]" /></div>
-                  <div><label className="text-[11px] font-bold opacity-60">높이 (mm)</label><input type="number" value={form.depth} onChange={e=>setForm({...form, depth: parseInt(e.target.value) || 0})} className="mt-1 w-full border border-black/10 rounded-[8px] px-3 py-2 text-[13px]" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[11px] font-bold opacity-60">재고 (개)</label><input type="number" value={form.stock} onChange={e=>setForm({...form, stock: parseInt(e.target.value) || 0})} className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" /></div>
-                  <div><label className="text-[11px] font-bold opacity-60">선반 위치 - WMS 피킹 위치</label><input value={form.location} onChange={e=>setForm({...form, location: e.target.value.toUpperCase()})} placeholder="예: A-01-02" className="mt-1 w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px] font-mono" /></div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 flex gap-2"><button onClick={handleAddProduct} className="bg-black text-white px-8 py-3 rounded-full text-[13px] font-bold">상품 등록 - 기초 공사 완료!</button><button onClick={()=>setTab("list")} className="border border-black/10 px-6 py-3 rounded-full text-[13px]">취소</button></div>
-          </div>
-        )}
-
-        {tab==="bundle" && (
-          <div className="mt-6 grid md:grid-cols-2 gap-6">
-            <div className="bg-white border border-black/5 rounded-[16px] p-6">
-              <h3 className="font-bold text-[14px]">세트 상품 만들기 - 여러 상품을 1개로 패키지화! (사방넷 기능!)</h3>
-              <div className="mt-4 space-y-3">
-                <input value={bundleForm.bundle_sku} onChange={e=>setBundleForm({...bundleForm, bundle_sku: e.target.value.toUpperCase()})} placeholder="세트 SKU 예: SET-001" className="w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px] font-mono" />
-                <input value={bundleForm.bundle_name} onChange={e=>setBundleForm({...bundleForm, bundle_name: e.target.value})} placeholder="세트명 예: 이어폰 + 케이스 세트" className="w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" />
-                <input type="number" value={bundleForm.price} onChange={e=>setBundleForm({...bundleForm, price: parseInt(e.target.value) || 0})} placeholder="세트 가격 예: 69000" className="w-full border border-black/10 rounded-[8px] px-4 py-2.5 text-[13px]" />
-                <div className="bg-[#fafaf8] rounded-[12px] p-4">
-                  <p className="text-[11px] font-bold">구성품 선택 (2개 이상)</p>
-                  <div className="mt-2 space-y-2 max-h-[200px] overflow-auto">
-                    {products.map(p => (
-                      <div key={p.id} className="flex items-center justify-between bg-white border border-black/5 rounded-[8px] px-3 py-2">
-                        <div><p className="font-bold text-[12px]">{p.product_name}</p><p className="font-mono text-[10px] opacity-50">{p.sku} - {p.stock}개 보유</p></div>
-                        <div className="flex items-center gap-2">
-                          <input type="number" min="1" defaultValue="1" id={`qty-${p.sku}`} className="w-[50px] border rounded px-2 py-1 text-[11px]" />
-                          <button onClick={()=>{
-                            const qty = parseInt((document.getElementById(`qty-${p.sku}`) as HTMLInputElement)?.value || "1");
-                            if (selectedSkus.find(s=>s.sku===p.sku)) setSelectedSkus(selectedSkus.filter(s=>s.sku!==p.sku));
-                            else setSelectedSkus([...selectedSkus, { sku: p.sku, qty }]);
-                          }} className={`px-3 py-1 rounded-full text-[11px] font-bold ${selectedSkus.find(s=>s.sku===p.sku) ? "bg-black text-white" : "bg-black/10"}`}>{selectedSkus.find(s=>s.sku===p.sku) ? "선택됨" : "선택"}</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[11px] opacity-50 mt-2">선택됨: {selectedSkus.map(s=>`${s.sku} x${s.qty}`).join(", ") || "없음"}</p>
-                </div>
-                <button onClick={handleCreateBundle} className="w-full bg-amber-400 text-black py-3 rounded-full text-[13px] font-bold">세트 상품 만들기!</button>
-              </div>
-            </div>
-            <div className="bg-black text-white rounded-[16px] p-6">
-              <h3 className="font-bold text-[14px]">내 세트 상품 목록 - WMS에서 자동 피킹!</h3>
-              <div className="mt-4 space-y-3">
-                {bundles.map(b => (
-                  <div key={b.id} className="bg-white text-black rounded-[12px] p-4"><p className="font-mono font-bold text-[11px] bg-black text-white px-2 py-0.5 rounded-full inline-block">{b.bundle_sku}</p><p className="font-bold text-[13px] mt-2">{b.bundle_name}</p><p className="text-[11px] opacity-60 mt-1">구성: {b.components.map(c=>`${c.product_name} x${c.qty}`).join(" + ")}</p><p className="font-bold text-[12px] mt-2">{b.price.toLocaleString()}원</p></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {tab==="upload" && (
-          <div className="mt-6 bg-white border border-black/5 rounded-[16px] p-6">
-            <h3 className="font-bold text-[16px]">플랫폼에 상품 업로드 - 사방넷 기능! (준비중)</h3>
-            <p className="text-[12px] opacity-60 mt-2">내 상품을 네이버, 쿠팡, 11번가에 한 번에 등록! 사방넷처럼!</p>
-            <div className="mt-6 grid md:grid-cols-3 gap-4">
-              <div className="border border-green-200 bg-green-50 rounded-[12px] p-4"><p className="font-bold text-[13px] text-green-800">네이버 스마트스토어</p><button className="mt-3 bg-green-600 text-white px-4 py-2 rounded-full text-[11px] font-bold w-full">네이버에 업로드 (준비중)</button></div>
-              <div className="border border-red-200 bg-red-50 rounded-[12px] p-4"><p className="font-bold text-[13px] text-red-800">쿠팡 WING</p><button className="mt-3 bg-red-600 text-white px-4 py-2 rounded-full text-[11px] font-bold w-full">쿠팡에 업로드 (준비중)</button></div>
-              <div className="border border-blue-200 bg-blue-50 rounded-[12px] p-4"><p className="font-bold text-[13px] text-blue-800">11번가</p><button className="mt-3 bg-blue-600 text-white px-4 py-2 rounded-full text-[11px] font-bold w-full">11번가에 업로드 (준비중)</button></div>
-            </div>
-          </div>
-        )}
+        <div className="mt-4 bg-black text-white rounded-[16px] p-5">
+          <p className="text-[13px] font-bold">💡 상품 마스터가 왜 먼저냐? + 엑셀 팁</p>
+          <p className="text-[11px] opacity-60 mt-2">WMS, 주문, 송장, 세트상품 분해, 샘플 자동추가, 포토카드 랜덤 전부 이 테이블을 참조! SKU가 틀리면 전부 꼬임! 엑셀 업로드할 때 템플릿 다운받아서 그대로 채워서 업로드! 중복 SKU 있으면 덮어쓰기!</p>
+        </div>
       </main>
     </div>
   );
