@@ -3,44 +3,89 @@ import { cookies } from "next/headers";
 
 export async function GET(req: Request) {
   const cookieStore = await cookies();
-  
-  // 모든 인증 쿠키 삭제!
+  const all = cookieStore.getAll();
+
   const toDelete = [
     "flex-auth",
     "force_logout",
     "sb-qkpnvfmsmvcemdblaahl-auth-token",
     "sb-qkpnvfmsmvcemdblaahl-auth-token.0",
     "sb-qkpnvfmsmvcemdblaahl-auth-token.1",
-    "sb-qkpnvfmsmvcemdblaahl-auth-token.2",
     "sb-qkpnvfmsmvcemdblaahl-auth-token-code-verifier",
   ];
 
+  // httpOnly, secure, sameSite 맞춰서 삭제!
   for (const name of toDelete) {
-    try { cookieStore.delete(name); } catch {}
-    try { cookieStore.set(name, "", { maxAge: 0, path: "/" }); } catch {}
+    cookieStore.set({
+      name,
+      value: "",
+      maxAge: 0,
+      path: "/",
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+    });
+    cookieStore.set({
+      name,
+      value: "",
+      maxAge: 0,
+      path: "/",
+      httpOnly: false,
+      secure: false,
+      sameSite: "lax",
+    });
   }
 
-  // 발견된 sb- 쿠키도 전부 삭제!
-  const all = cookieStore.getAll();
   for (const c of all) {
     if (c.name.startsWith("sb-") || c.name.includes("supabase") || c.name === "flex-auth" || c.name === "force_logout") {
-      try { cookieStore.set(c.name, "", { maxAge: 0, path: "/" }); } catch {}
-      try { cookieStore.delete(c.name); } catch {}
+      cookieStore.set({
+        name: c.name,
+        value: "",
+        maxAge: 0,
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+      });
+      cookieStore.set({
+        name: c.name,
+        value: "",
+        maxAge: 0,
+        path: "/",
+        httpOnly: false,
+        secure: false,
+        sameSite: "lax",
+      });
     }
   }
 
   const url = new URL(req.url);
   const res = NextResponse.redirect(new URL("/login", url.origin));
   
-  // 리다이렉트 응답에도 삭제 쿠키 설정!
   for (const name of toDelete) {
-    res.cookies.set(name, "", { maxAge: 0, path: "/" });
+    res.cookies.set({
+      name,
+      value: "",
+      maxAge: 0,
+      path: "/",
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+    });
+    res.cookies.set({
+      name,
+      value: "",
+      maxAge: 0,
+      path: "/",
+      httpOnly: false,
+      secure: false,
+      sameSite: "lax",
+    });
   }
-  res.cookies.set("force_logout", "", { maxAge: 0, path: "/" });
-  
+
   return res;
 }
 
-export async function POST() {
-  return GET(new Request("https://dummy.com"));
+export async function POST(req: Request) {
+  return GET(req);
 }
