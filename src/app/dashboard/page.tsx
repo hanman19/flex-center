@@ -6,17 +6,36 @@ import { supabase } from "@/lib/supabase";
 export default function DashboardProPage() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     setMounted(true);
-    const getUser = async () => {
+    const checkAuth = async () => {
+      // 강제 로그아웃 체크!
+      const forceLogout = localStorage.getItem("force_logout");
+      if (forceLogout === "true") {
+        console.log("강제 로그아웃 감지! 세션 삭제!");
+        await supabase.auth.signOut();
+        localStorage.clear();
+        sessionStorage.clear();
+        localStorage.setItem("force_logout", "false");
+        window.location.href = "/";
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log("유저 없음! 홈페이지로!");
+        window.location.href = "/";
+        return;
+      }
       setUser(user);
+      setChecking(false);
     };
-    getUser();
+    checkAuth();
   }, []);
 
-  if (!mounted) return <div className="min-h-screen bg-[#fafaf8]"><TopNav /><main className="max-w-[1400px] mx-auto px-6 py-6"><p>로딩중...</p></main></div>;
+  if (!mounted || checking) return <div className="min-h-screen bg-[#fafaf8]"><TopNav /><main className="max-w-[1400px] mx-auto px-6 py-6"><p>로딩중... 로그인 체크 중!</p></main></div>;
 
   return (
     <div className="min-h-screen bg-[#fafaf8]">
@@ -26,7 +45,7 @@ export default function DashboardProPage() {
           <div>
             <h1 className="text-[24px] font-black">대시보드 Pro - 진짜 데이터 + 카톡 알림</h1>
             <p className="text-[13px] opacity-60 mt-1">Supabase 진짜 데이터! 오늘 주문, 피킹, 재고 부족! 카톡 알림톡으로 수분에센스 재고 8개 남음 자동 알림!</p>
-            <p className="text-[11px] opacity-40 mt-1">현재 계정: {user?.email || "test@naver.com"} - 모든 계정 볼 수 있음! seller, admin 다!</p>
+            <p className="text-[11px] opacity-40 mt-1">현재 계정: {user?.email} - {user ? "로그인됨!" : "로그인 안 됨!"}</p>
           </div>
           <div className="flex gap-2">
             <span className="bg-[#FFC61A] text-black border border-black px-3 py-1 rounded-full text-[11px] font-bold">실시간 + 카톡 알림톡</span>
@@ -76,11 +95,6 @@ export default function DashboardProPage() {
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-6 bg-white border border-black/5 rounded-[16px] p-5">
-          <p className="font-bold">카톡 알림톡 발송 로그</p>
-          <p className="text-[10px] opacity-60">Supabase kakao_logs 테이블에 저장!</p>
         </div>
       </main>
     </div>
