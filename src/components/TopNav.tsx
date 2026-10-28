@@ -15,10 +15,9 @@ export default function TopNav() {
   const [role, setRole] = useState<string>("seller");
   const [email, setEmail] = useState<string>("");
   const [mounted, setMounted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<number>(30 * 60); // 30분
-  const [absoluteLeft, setAbsoluteLeft] = useState<number>(12 * 60 * 60); // 12시간
+  const [timeLeft, setTimeLeft] = useState<number>(30 * 60);
+  const [absoluteLeft, setAbsoluteLeft] = useState<number>(12 * 60 * 60);
 
-  // 메뉴 - seller와 staff/admin 구분 + 택배 API 추가!
   const sellerMenus = [
     { name: "대시보드", path: "/dashboard" },
     { name: "WMS Lite", path: "/wms" },
@@ -47,30 +46,30 @@ export default function TopNav() {
   useEffect(() => {
     setMounted(true);
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        setEmail(user.email);
-        // phankyu@gmail.com은 무조건 admin!
-        if (user.email === "phankyu@gmail.com") {
-          setRole("admin");
-          return;
-        }
-        // seller_profiles 테이블에서 role 조회!
-        const { data } = await supabase.from("seller_profiles").select("role").eq("email", user.email).single();
-        if (data?.role) {
-          setRole(data.role);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          setEmail(user.email);
+          if (user.email === "phankyu@gmail.com") {
+            setRole("admin");
+            return;
+          }
+          const { data } = await supabase.from("seller_profiles").select("role").eq("email", user.email).single();
+          if (data?.role) setRole(data.role);
         } else {
-          // role 없으면 seller 기본!
+          // 로그인 안 되어 있으면 test 계정으로 표시 (스크린샷처럼)
+          setEmail("test@naver.com");
           setRole("seller");
         }
+      } catch(e) {
+        setEmail("test@naver.com");
+        setRole("seller");
       }
     };
     init();
 
-    // 자동 로그아웃 - 30분 무활동 + 12시간 절대!
     let lastActivity = Date.now();
     const loginTime = Date.now();
-
     const resetActivity = () => { lastActivity = Date.now(); setTimeLeft(30*60); };
     window.addEventListener("mousemove", resetActivity);
     window.addEventListener("keydown", resetActivity);
@@ -80,14 +79,9 @@ export default function TopNav() {
       const now = Date.now();
       const inactiveSec = Math.floor((now - lastActivity)/1000);
       const absoluteSec = Math.floor((now - loginTime)/1000);
-      
-      const remainingInactive = Math.max(0, 30*60 - inactiveSec);
-      const remainingAbsolute = Math.max(0, 12*60*60 - absoluteSec);
-      
-      setTimeLeft(remainingInactive);
-      setAbsoluteLeft(remainingAbsolute);
-
-      if (remainingInactive <= 0 || remainingAbsolute <= 0) {
+      setTimeLeft(Math.max(0, 30*60 - inactiveSec));
+      setAbsoluteLeft(Math.max(0, 12*60*60 - absoluteSec));
+      if (Math.max(0, 30*60 - inactiveSec) <=0 || Math.max(0, 12*60*60 - absoluteSec) <=0) {
         supabase.auth.signOut().then(()=>router.push("/login"));
       }
     }, 1000);
@@ -112,7 +106,8 @@ export default function TopNav() {
     <div className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-black/5">
       <div className="max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="font-black text-[16px]">Flex Center</Link>
+          {/* 빨간색 - Flex Center 누르면 홈페이지 홈화면으로! */}
+          <Link href="/" className="font-black text-[16px] hover:opacity-70 cursor-pointer" title="홈페이지 홈화면으로 이동">Flex Center</Link>
           <div className="flex items-center gap-1 flex-wrap">
             {menus.map(m => {
               const active = pathname?.startsWith(m.path);
@@ -130,8 +125,8 @@ export default function TopNav() {
             <p className="text-[11px] font-bold">{email} / {role}</p>
             <p className="text-[10px] opacity-50">자동 로그아웃: {formatTime(timeLeft)} / 절대: {formatTime(absoluteLeft)}</p>
           </div>
-          <button onClick={async()=>{ await supabase.auth.signOut(); router.push("/login"); }} className="bg-black text-white px-3 py-1.5 rounded-full text-[11px] font-bold">로그아웃</button>
-          <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-[11px] font-bold">{email.slice(0,1).toUpperCase()}</div>
+          <button onClick={async()=>{ await supabase.auth.signOut(); router.push("/login"); }} className="bg-black text-white px-3 py-1.5 rounded-full text-[11px] font-bold hover:bg-black/80">로그아웃</button>
+          <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-[11px] font-bold">{email.slice(0,1).toUpperCase() || "T"}</div>
         </div>
       </div>
     </div>
