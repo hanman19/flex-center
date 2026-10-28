@@ -12,6 +12,11 @@ export function proxy(req: NextRequest) {
   const isProtected = PROTECTED.some(p => path.startsWith(p));
   if (!isProtected) return NextResponse.next();
 
+  // logged_out 플래그 있으면 무조건 /login으로!
+  if (req.cookies.get("logged_out")) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
   const hasAuth = req.cookies.getAll().some(c => c.name.startsWith("sb-") || c.name.includes("supabase") || c.name === "flex-auth");
 
   if (!hasAuth) {
