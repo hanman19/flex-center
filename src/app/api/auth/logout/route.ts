@@ -12,13 +12,11 @@ export async function POST() {
   }
 
   const res = NextResponse.json({ ok: true });
-  // 확실히 지우기!
   res.cookies.set("flex-auth", "", { maxAge: 0, path: "/" });
   res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token", "", { maxAge: 0, path: "/" });
   res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token.0", "", { maxAge: 0, path: "/" });
   res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token.1", "", { maxAge: 0, path: "/" });
-  res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token-code-verifier", "", { maxAge: 0, path: "/" });
-  
+  res.cookies.set("force_logout", "1", { maxAge: 86400, path: "/" });
   return res;
 }
 
@@ -32,7 +30,6 @@ export async function GET(req: Request) {
     }
   }
 
-  // 리다이렉트로 쿠키 삭제! fetch가 아니라 직접 이동!
   const url = new URL(req.url);
   const redirectUrl = new URL("/login?logout=done", url.origin);
   const res = NextResponse.redirect(redirectUrl);
@@ -41,7 +38,7 @@ export async function GET(req: Request) {
   res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token", "", { maxAge: 0, path: "/" });
   res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token.0", "", { maxAge: 0, path: "/" });
   res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token.1", "", { maxAge: 0, path: "/" });
-  res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token-code-verifier", "", { maxAge: 0, path: "/" });
+  res.cookies.set("force_logout", "1", { maxAge: 86400, path: "/" });
   
   return res;
 }

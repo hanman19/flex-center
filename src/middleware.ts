@@ -18,7 +18,6 @@ const PROTECTED = [
 export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  // 로그인, 홈페이지, 로그아웃, API, 정적 파일은 패스! 절대 안 건드림!
   if (
     path === "/" ||
     path.startsWith("/login") ||
@@ -27,15 +26,42 @@ export function middleware(req: NextRequest) {
     path.startsWith("/_next") ||
     path.includes(".")
   ) {
+    // 로그인 페이지에서 force_logout 있으면 서버 쿠키 삭제!
+    if (path.startsWith("/login")) {
+      const hasForceLogout = req.cookies.get("force_logout");
+      if (hasForceLogout) {
+        const res = NextResponse.next();
+        // 서버 쿠키 전부 삭제!
+        req.cookies.getAll().forEach(c => {
+          if (c.name.startsWith("sb-") || c.name.includes("supabase") || c.name === "flex-auth") {
+            res.cookies.set(c.name, "", { maxAge: 0, path: "/" });
+          }
+        });
+        // force_logout은 유지! 홈페이지에서도 로그아웃 상태 유지!
+        return res;
+      }
+    }
     return NextResponse.next();
   }
 
   const isProtected = PROTECTED.some((p) => path.startsWith(p));
   if (!isProtected) return NextResponse.next();
 
-  // 쿠키에 로그인 정보 있는지 확인! 없으면 /login으로!
-  const cookies = req.cookies.getAll();
-  const hasAuth = cookies.some(
+  // force_logout 쿠키 있으면 무조건 로그인 안 된 걸로!
+  const hasForceLogout = req.cookies.get("force_logout");
+  if (hasForceLogout) {
+    const loginUrl = new URL("/login?logout=done", req.url);
+    const res = NextResponse.redirect(loginUrl);
+    // 서버 쿠키 삭제!
+    req.cookies.getAll().forEach(c => {
+      if (c.name.startsWith("sb-") || c.name.includes("supabase") || c.name === "flex-auth") {
+        res.cookies.set(c.name, "", { maxAge: 0, path: "/" });
+      }
+    });
+    return res;
+  }
+
+  const hasAuth = req.cookies.getAll().some(
     (c) => c.name.startsWith("sb-") || c.name.includes("supabase") || c.name === "flex-auth"
   );
 
