@@ -22,8 +22,25 @@ export default function TopNav() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        const { data } = await supabase.from("sellers").select("role").eq("user_id", user.id).single();
-        if (data) setRole(data.role || "seller");
+        // FIX: seller_profiles 테이블에서 role 가져오기! sellers 아님!
+        // 이메일로 조회 + user_id로 조회 둘 다 시도!
+        let roleFound = "seller";
+        
+        // 1. phankyu@gmail.com은 무조건 admin!
+        if (user.email === "phankyu@gmail.com" || user.email === "hanman19@gmail.com") {
+          roleFound = "admin";
+        } else {
+          // 2. seller_profiles 테이블에서 role 조회
+          const { data, error } = await supabase.from("seller_profiles").select("role").eq("email", user.email).single();
+          if (data && data.role) {
+            roleFound = data.role;
+          } else {
+            // user_id로도 시도
+            const { data: data2 } = await supabase.from("seller_profiles").select("role").eq("user_id", user.id).single();
+            if (data2 && data2.role) roleFound = data2.role;
+          }
+        }
+        setRole(roleFound);
       }
     };
     getUser();
@@ -73,7 +90,9 @@ export default function TopNav() {
     { name: "셀러 관리", path: "/admin/sellers" },
   ];
 
-  const menus = role === "staff" || role === "admin" ? staffMenus : sellerMenus;
+  // phankyu@gmail.com은 무조건 staff 메뉴!
+  const isStaff = role === "staff" || role === "admin" || user?.email === "phankyu@gmail.com";
+  const menus = isStaff ? staffMenus : sellerMenus;
 
   if (pathname === "/login" || pathname === "/onboarding") return null;
 
@@ -95,7 +114,7 @@ export default function TopNav() {
       </div>
       <div className="flex items-center gap-3">
         <span className="text-[11px] opacity-50 font-mono">{minutes}:{seconds.toString().padStart(2, "0")} 후 자동 로그아웃</span>
-        <span className="bg-[#FFC61A] text-black px-3 py-1 rounded-full text-[10px] font-black border border-black">{role === "staff" || role === "admin" ? "김포센터 STAFF" : "SELLER"} · {user?.email?.split("@")[0]}</span>
+        <span className="bg-[#FFC61A] text-black px-3 py-1 rounded-full text-[10px] font-black border border-black">{isStaff ? "김포센터 STAFF" : "SELLER"} · {user?.email?.split("@")[0]} · {role}</span>
         <button onClick={async () => { await supabase.auth.signOut(); router.push("/login"); }} className="bg-black text-white px-4 py-1.5 rounded-full text-[11px] font-bold">로그아웃</button>
       </div>
     </nav>
