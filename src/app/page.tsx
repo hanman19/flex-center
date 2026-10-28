@@ -1,5 +1,8 @@
+"use client";
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const PLANS = [
   { id: "STARTER", name: "STARTER", quota: "월 10건", price: "26,900", over: "1,600원", range: "11-100건", switchText: "87건부터 LITE가 더 저렴", storage: "선반 1개", size: "300×450×250 / 1 SKU", badge: "BETA" },
@@ -11,6 +14,48 @@ const PLANS = [
 ];
 
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch("/api/auth/check?t=" + Date.now(), { cache: "no-store" });
+        const data = await res.json();
+        if (data.reason === "logged_out flag" || document.cookie.includes("logged_out") || localStorage.getItem("logged_out")) {
+          setIsLoggedIn(false);
+          if (!data.loggedIn) {
+            localStorage.clear();
+          }
+        } else {
+          setIsLoggedIn(data.loggedIn);
+        }
+      } catch {
+        const hasLoggedOut = localStorage.getItem("logged_out") || document.cookie.includes("logged_out");
+        if (hasLoggedOut) {
+          setIsLoggedIn(false);
+        } else {
+          const hasFlex = !!localStorage.getItem("flex-auth");
+          setIsLoggedIn(hasFlex);
+        }
+      }
+    };
+    check();
+  }, []);
+
+  const goMember = (e: any) => {
+    const hasLoggedOut = localStorage.getItem("logged_out") || document.cookie.includes("logged_out");
+    if (hasLoggedOut) {
+      e.preventDefault();
+      router.push("/login");
+      return;
+    }
+    if (!isLoggedIn) {
+      e.preventDefault();
+      router.push("/login");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fafaf8] text-[#111]">
       <header className="border-b border-black/5 bg-white/70 backdrop-blur-xl sticky top-0 z-20">
@@ -22,13 +67,12 @@ export default function Home() {
           </Link>
           <div className="flex items-center gap-2">
             <Link href="#pricing" className="text-[13px] px-4 py-2 rounded-full border border-black/10 hover:bg-black hover:text-white transition">요금제</Link>
-            <Link href="/dashboard" className="text-[13px] px-4 py-2 rounded-full bg-black text-white hover:bg-zinc-800 transition">회원전용 →</Link>
+            <Link href="/dashboard" onClick={goMember} className="text-[13px] px-4 py-2 rounded-full bg-black text-white hover:bg-zinc-800 transition">{isLoggedIn ? "대시보드 →" : "회원전용 →"}</Link>
           </div>
         </div>
       </header>
 
       <main>
-        {/* HERO - AI 이미지 포함 원본 복구 */}
         <section className="max-w-[1200px] mx-auto px-6 md:px-8 pt-12 md:pt-20">
           <div className="grid md:grid-cols-12 gap-8 items-end">
             <div className="md:col-span-7">
@@ -48,7 +92,7 @@ export default function Home() {
                 <Link href="#pricing" className="bg-black text-white px-7 py-4 rounded-full text-[14px] font-semibold hover:bg-zinc-800 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
                   요금제 보기 →
                 </Link>
-                <Link href="/dashboard" className="bg-white border border-black/10 px-7 py-4 rounded-full text-[14px] font-semibold hover:bg-black hover:text-white transition-all">
+                <Link href="/dashboard" onClick={goMember} className="bg-white border border-black/10 px-7 py-4 rounded-full text-[14px] font-semibold hover:bg-black hover:text-white transition-all">
                   회원전용 입장
                 </Link>
               </div>
@@ -68,7 +112,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Company Intro - 이미지 포함 */}
         <section className="max-w-[1200px] mx-auto px-6 md:px-8 pt-20 md:pt-32">
           <div className="grid md:grid-cols-12 gap-8 border-t border-black/5 pt-12">
             <div className="md:col-span-5">
@@ -103,7 +146,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* How it works + Small business image */}
         <section className="max-w-[1200px] mx-auto px-6 md:px-8 pt-20">
           <div className="grid md:grid-cols-12 gap-8">
             <div className="md:col-span-7">
@@ -134,7 +176,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Pricing - 건당 단가 삭제 버전! */}
         <section id="pricing" className="max-w-[1200px] mx-auto px-6 md:px-8 pt-20 md:pt-32">
           <div className="flex items-end justify-between">
             <div>
@@ -174,7 +215,6 @@ export default function Home() {
           <div className="mt-8 text-center"><Link href="/pricing" className="text-[13px] bg-black text-white px-6 py-3 rounded-full font-bold hover:bg-zinc-800 transition">전체 요금제 비교표 보기 →</Link></div>
         </section>
 
-        {/* CTA */}
         <section className="max-w-[1200px] mx-auto px-6 md:px-8 py-20 md:py-32">
           <div className="bg-black text-white rounded-[32px] p-8 md:p-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
             <div>
@@ -183,7 +223,7 @@ export default function Home() {
             </div>
             <div className="flex gap-3">
               <Link href="#pricing" className="bg-white text-black px-7 py-4 rounded-full text-[14px] font-semibold hover:bg-zinc-100 transition">요금제 보기</Link>
-              <Link href="/dashboard" className="bg-white/10 text-white border border-white/20 px-7 py-4 rounded-full text-[14px] font-semibold hover:bg-white/20 transition">회원전용 입장 →</Link>
+              <Link href="/dashboard" onClick={goMember} className="bg-white/10 text-white border border-white/20 px-7 py-4 rounded-full text-[14px] font-semibold hover:bg-white/20 transition">회원전용 입장 →</Link>
             </div>
           </div>
         </section>
