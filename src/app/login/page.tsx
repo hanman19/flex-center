@@ -1,13 +1,37 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("test@naver.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // 로그아웃 후 왔으면 한번 더 싹 지우기! 이중 안전장치!
+    const isLogout = searchParams.get("logout") === "done";
+    if (isLogout) {
+      localStorage.removeItem("sb-qkpnvfmsmvcemdblaahl-auth-token");
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith("sb-") || k.includes("supabase") || k === "flex-auth") {
+          localStorage.removeItem(k);
+        }
+      });
+      sessionStorage.clear();
+      document.cookie.split(";").forEach(c => {
+        const name = c.split("=")[0].trim();
+        if (name.startsWith("sb-") || name.includes("supabase") || name === "flex-auth") {
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+        }
+      });
+      // 서버 쿠키도 다시 한번!
+      fetch("/api/auth/logout", { method: "POST", cache: "no-store" }).catch(()=>{});
+    }
+  }, [searchParams]);
 
   const doLogin = async () => {
     if (!email || !password) {
@@ -18,28 +42,16 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError(error.message);
         setLoading(false);
         return;
       }
-
       if (data.user) {
         document.cookie = `flex-auth=${email}; path=/; max-age=86400;`;
-        document.cookie = `sb-qkpnvfmsmvcemdblaahl-auth-token=${data.session?.access_token || "logged"}; path=/; max-age=86400;`;
         localStorage.setItem("flex-auth", email);
-        localStorage.setItem("sb-qkpnvfmsmvcemdblaahl-auth-token", JSON.stringify(data.session));
-
-        await fetch("/api/auth/login", {
-          method: "POST",
-          body: JSON.stringify({ email }),
-        }).catch(()=>{});
-
+        await fetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email }) }).catch(()=>{});
         window.location.href = "/dashboard";
       }
     } catch (e: any) {
@@ -57,20 +69,20 @@ export default function LoginPage() {
         </Link>
         <h1 className="text-[18px] font-black mt-4">회원전용 로그인</h1>
         <p className="text-[11px] opacity-60 mt-1">사업자 인증을 완료한 회원만 로그인할 수 있습니다</p>
-
+        {searchParams.get("logout") === "done" && (
+          <div className="mt-3 bg-green-50 border border-green-200 rounded-full px-3 py-2 text-[11px] text-green-700">로그아웃 완료! 서버 쿠키 삭제됨!</div>
+        )}
         <div className="mt-6 space-y-3">
           <div>
             <p className="text-[11px] font-bold mb-1">이메일</p>
-            <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="example@naver.com" className="w-full border border-black/10 rounded-full px-4 py-3 text-[13px]" />
+            <input value={email} onChange={e=>setEmail(e.target.value)} className="w-full border border-black/10 rounded-full px-4 py-3 text-[13px]" />
           </div>
           <div>
             <p className="text-[11px] font-bold mb-1">비밀번호</p>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter" && doLogin()} placeholder="비밀번호" className="w-full border border-black/10 rounded-full px-4 py-3 text-[13px]" />
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter" && doLogin()} className="w-full border border-black/10 rounded-full px-4 py-3 text-[13px]" />
           </div>
           {error && <p className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded-full px-3 py-2">{error}</p>}
-          <button onClick={doLogin} disabled={loading} className="w-full bg-black text-white py-3 rounded-full font-bold text-[13px] disabled:opacity-50">
-            {loading ? "로그인 중..." : "로그인 →"}
-          </button>
+          <button onClick={doLogin} disabled={loading} className="w-full bg-black text-white py-3 rounded-full font-bold text-[13px] disabled:opacity-50">{loading ? "로그인 중..." : "로그인 →"}</button>
           <Link href="/" className="block text-center text-[11px] opacity-50 mt-3 hover:opacity-80">홈으로 →</Link>
         </div>
       </div>
