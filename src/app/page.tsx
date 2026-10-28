@@ -74,7 +74,7 @@ export default function Home() {
             <div className="md:col-span-5">
               <p className="text-[11px] tracking-widest opacity-30">ABOUT FLEX CENTER</p>
               <h2 className="text-[28px] md:text-[36px] font-bold tracking-tight leading-[0.95] mt-4 break-keep">
-                셀러의 편의만을 위해 만든<br/>만든 물류 플랫폼.
+                셀러의 편의만을 위해 만든<br/> 물류 플랫폼.
               </h2>
               <p className="text-[14px] opacity-60 mt-6 leading-relaxed break-keep">
                 우리는 월 10건부터 시작합니다.<br/>
