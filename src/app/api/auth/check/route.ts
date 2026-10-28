@@ -1,16 +1,10 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
-  const cookieStore = await cookies();
-  const all = cookieStore.getAll();
-  
-  // logged_out 있으면 무조건 로그아웃!
-  const hasLoggedOut = all.some(c => c.name === "logged_out");
-  if (hasLoggedOut) {
-    return NextResponse.json({ loggedIn: false, reason: "logged_out flag" });
+export async function GET(req: NextRequest) {
+  if (req.cookies.get("logged_out")) {
+    return NextResponse.json({ loggedIn: false, reason: "logged_out flag", cookies: [] });
   }
-
-  const hasAuth = all.some(c => c.name.startsWith("sb-") || c.name.includes("supabase") || c.name === "flex-auth");
-  return NextResponse.json({ loggedIn: hasAuth, cookies: all.map(c=>c.name) });
+  const cookies = req.cookies.getAll();
+  const authCookies = cookies.filter(c => c.name.startsWith("sb-") || c.name.includes("supabase") || c.name === "flex-auth");
+  return NextResponse.json({ loggedIn: authCookies.length > 0, cookies: authCookies.map(c => c.name) });
 }
