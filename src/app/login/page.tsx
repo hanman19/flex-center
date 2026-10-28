@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("test@naver.com");
@@ -29,13 +30,11 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // 문지기가 볼 수 있게 쿠키 2개 다 박기!
         document.cookie = `flex-auth=${email}; path=/; max-age=86400;`;
         document.cookie = `sb-qkpnvfmsmvcemdblaahl-auth-token=${data.session?.access_token || "logged"}; path=/; max-age=86400;`;
         localStorage.setItem("flex-auth", email);
         localStorage.setItem("sb-qkpnvfmsmvcemdblaahl-auth-token", JSON.stringify(data.session));
 
-        // 서버 쿠키도 박기!
         await fetch("/api/auth/login", {
           method: "POST",
           body: JSON.stringify({ email }),
@@ -52,10 +51,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#fafaf8] flex items-center justify-center px-6">
       <div className="w-full max-w-[360px] bg-white border border-black/5 rounded-[24px] p-7">
-        <div className="flex items-center gap-2 mb-2">
+        <Link href="/" className="flex items-center gap-2 mb-2 hover:opacity-70">
           <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center text-white font-black text-[14px]">F</div>
           <span className="font-black text-[16px]">FLEX CENTER</span>
-        </div>
+        </Link>
         <h1 className="text-[18px] font-black mt-4">회원전용 로그인</h1>
         <p className="text-[11px] opacity-60 mt-1">사업자 인증을 완료한 회원만 로그인할 수 있습니다</p>
 
@@ -72,6 +71,7 @@ export default function LoginPage() {
           <button onClick={doLogin} disabled={loading} className="w-full bg-black text-white py-3 rounded-full font-bold text-[13px] disabled:opacity-50">
             {loading ? "로그인 중..." : "로그인 →"}
           </button>
+          <Link href="/" className="block text-center text-[11px] opacity-50 mt-3 hover:opacity-80">홈으로 →</Link>
         </div>
       </div>
     </div>
