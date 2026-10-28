@@ -40,6 +40,11 @@ function LoginInner() {
     setError("");
 
     try {
+      // force_logout 플래그 삭제! 로그인하면 로그아웃 상태 해제!
+      localStorage.removeItem("force_logout");
+      document.cookie = `force_logout=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      await fetch("/api/auth/clear-logout", { method: "POST" }).catch(()=>{});
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError(error.message);
@@ -50,6 +55,7 @@ function LoginInner() {
         document.cookie = `flex-auth=${email}; path=/; max-age=86400;`;
         localStorage.setItem("flex-auth", email);
         await fetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email }) }).catch(()=>{});
+        // 강제 이동!
         window.location.href = "/dashboard";
       }
     } catch (e: any) {
