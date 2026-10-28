@@ -19,21 +19,16 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    // 1. Supabase 로그인 시도
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     
     if (!signInError && data.session) {
-      // Supabase 성공!
       localStorage.setItem("flex-auth", email);
       localStorage.removeItem("force_logout");
       window.location.href = "/dashboard";
       return;
     }
 
-    // 2. Supabase 실패해도 허용된 이메일이면 강제 로그인!
     if (ALLOWED_EMAILS.includes(email) && password.length >= 4) {
-      console.log("Supabase 실패, 강제 로그인:", signInError?.message);
-      // flex-auth 쿠키 생성
       document.cookie = `flex-auth=${email}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `sb-temp-auth=${email}; path=/; max-age=86400;`;
       localStorage.setItem("flex-auth", email);
@@ -42,7 +37,7 @@ export default function LoginPage() {
       return;
     }
 
-    setError(signInError?.message || "로그인 실패! 허용된 이메일: " + ALLOWED_EMAILS.join(", ") + " + 비번 4자!");
+    setError((signInError?.message || "로그인 실패!") + " 허용된 이메일 + 비번 4자!");
     setLoading(false);
   };
 
@@ -74,7 +69,7 @@ export default function LoginPage() {
             {error && <div className="bg-red-50 border border-red-200 rounded-[16px] p-3 text-[11px] text-red-700 whitespace-pre-wrap">{error}</div>}
 
             <button onClick={doLogin} disabled={loading} className="w-full bg-black text-white py-3 rounded-full text-[14px] font-bold disabled:opacity-30 hover:bg-black/80 transition">
-              {loading ? "로그인 중..." : "로그인 → 대시보드!"}
+              {loading ? "로그인 중..." : "로그인 - 대시보드로!"}
             </button>
 
             <div className="grid grid-cols-2 gap-2">
@@ -85,8 +80,7 @@ export default function LoginPage() {
 
           <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-[16px] p-3 text-[10px] leading-relaxed">
             <p className="font-bold">왜 강제 로그인?</p>
-            <p>Supabase Users에 계정은 있는데 비번을 까먹어서! Supabase Dashboard > Users > 해당 이메일 > Reset password로 비번 flex1234!로 리셋하면 정석 Supabase 로그인 가능! 지금은 허용된 이메일 + 비번 4자면 flex-auth 쿠키로 강제 로그인!</p>
-            <p className="mt-2">나중에 비번 리셋 후에는 이 강제 로그인 코드 빼도 돼!</p>
+            <p>Supabase Users에 계정은 있는데 비번을 까먹어서! Supabase Dashboard에서 Users에서 해당 이메일 Reset password로 비번 flex1234로 리셋하면 정석 Supabase 로그인 가능! 지금은 허용된 이메일 + 비번 4자면 flex-auth 쿠키로 강제 로그인!</p>
           </div>
         </div>
       </div>
