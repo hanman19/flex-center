@@ -5,30 +5,43 @@ export async function POST() {
   const cookieStore = await cookies();
   const all = cookieStore.getAll();
   
-  // 모든 Supabase + flex-auth 쿠키 삭제! 속성까지 맞춰서!
   for (const c of all) {
     if (c.name.startsWith("sb-") || c.name.includes("supabase") || c.name === "flex-auth") {
-      cookieStore.set({
-        name: c.name,
-        value: "",
-        maxAge: 0,
-        path: "/",
-      });
-      try {
-        cookieStore.delete(c.name);
-      } catch {}
+      cookieStore.set(c.name, "", { maxAge: 0, path: "/" });
     }
   }
-  
-  // 혹시 모르는 쿠키도 한번 더!
-  const res = NextResponse.json({ ok: true, cleared: all.length });
+
+  const res = NextResponse.json({ ok: true });
+  // 확실히 지우기!
   res.cookies.set("flex-auth", "", { maxAge: 0, path: "/" });
   res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token", "", { maxAge: 0, path: "/" });
+  res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token.0", "", { maxAge: 0, path: "/" });
+  res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token.1", "", { maxAge: 0, path: "/" });
   res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token-code-verifier", "", { maxAge: 0, path: "/" });
   
   return res;
 }
 
-export async function GET() {
-  return POST();
+export async function GET(req: Request) {
+  const cookieStore = await cookies();
+  const all = cookieStore.getAll();
+  
+  for (const c of all) {
+    if (c.name.startsWith("sb-") || c.name.includes("supabase") || c.name === "flex-auth") {
+      cookieStore.set(c.name, "", { maxAge: 0, path: "/" });
+    }
+  }
+
+  // 리다이렉트로 쿠키 삭제! fetch가 아니라 직접 이동!
+  const url = new URL(req.url);
+  const redirectUrl = new URL("/login?logout=done", url.origin);
+  const res = NextResponse.redirect(redirectUrl);
+  
+  res.cookies.set("flex-auth", "", { maxAge: 0, path: "/" });
+  res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token", "", { maxAge: 0, path: "/" });
+  res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token.0", "", { maxAge: 0, path: "/" });
+  res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token.1", "", { maxAge: 0, path: "/" });
+  res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token-code-verifier", "", { maxAge: 0, path: "/" });
+  
+  return res;
 }
