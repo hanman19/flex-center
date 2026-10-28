@@ -37,7 +37,7 @@ export default function Home() {
                 SMART FULFILLMENT
               </div>
               <h1 className="text-[38px] md:text-[64px] font-[800] tracking-[-0.04em] leading-[0.9] mt-6">
-                누구나 자유롭게 이용할 수 있는<br/>
+                누구나 자유롭게 <br/>이용할 수 있는<br/>
                 <span className="opacity-20">풀필먼트 플랫폼</span>
               </h1>
               <p className="text-[16px] md:text-[18px] opacity-60 mt-6 max-w-[480px] leading-relaxed break-keep">
