@@ -34,11 +34,11 @@ export default function Home() {
             <div className="md:col-span-7">
               <div className="inline-flex items-center gap-2 text-[11px] tracking-widest border border-black/10 rounded-full px-3 py-1">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                MICRO FULFILLMENT CENTER · GIMPO
+                SMART FULFILLMENT
               </div>
               <h1 className="text-[38px] md:text-[64px] font-[800] tracking-[-0.04em] leading-[0.9] mt-6">
                 모든 셀러를 위한<br/>
-                <span className="opacity-20">큰 물류.</span>
+                <span className="opacity-20">풀필먼트 플랫폼.</span>
               </h1>
               <p className="text-[16px] md:text-[18px] opacity-60 mt-6 max-w-[480px] leading-relaxed break-keep">
                 집이 창고가 되었다면, 이제 맡기세요.<br/>
@@ -74,11 +74,11 @@ export default function Home() {
             <div className="md:col-span-5">
               <p className="text-[11px] tracking-widest opacity-30">ABOUT FLEX CENTER</p>
               <h2 className="text-[28px] md:text-[36px] font-bold tracking-tight leading-[0.95] mt-4 break-keep">
-                셀러의 편의만을 위해 만든<br/> 물류 플랫폼.
+                셀러의 편의만을 위한<br/> FLEX
               </h2>
               <p className="text-[14px] opacity-60 mt-6 leading-relaxed break-keep">
                 우리는 월 10건부터 시작합니다.<br/>
-                당신의 브랜드가 성공 할 때까지 함께합니다.
+                함께 성장해 나갑니다.
               </p>
             </div>
             <div className="md:col-span-7">
