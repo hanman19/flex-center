@@ -1,13 +1,11 @@
 "use client";
-import TopNav from "@/components/TopNav";
-import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-export default function TopNavFixed() {
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+export default function TopNav() {
   const [email, setEmail] = useState<string | null>(null);
   const [role, setRole] = useState<string>("seller");
-  const [timeLeft, setTimeLeft] = useState(1800);
 
   useEffect(() => {
     const getUser = async () => {
@@ -27,28 +25,9 @@ export default function TopNavFixed() {
     getUser();
   }, []);
 
-  const handleLogout = async () => {
-    console.log("로그아웃 시작!");
-    try {
-      // 1. 클라이언트 로그아웃
-      await supabase.auth.signOut();
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // 2. 서버 쿠키 로그아웃 API 호출!
-      await fetch("/api/auth/logout", { method: "POST" });
-      
-      console.log("로그아웃 완료! 홈페이지로!");
-      window.location.href = "/";
-    } catch (e) {
-      console.error("로그아웃 에러", e);
-      localStorage.clear();
-      sessionStorage.clear();
-      document.cookie.split(";").forEach(function(c) { 
-        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-      });
-      window.location.href = "/";
-    }
+  const handleLogout = () => {
+    // /logout 페이지로 이동! 거기서 전체 삭제!
+    window.location.href = "/logout";
   };
 
   const isActive = (path: string) => typeof window !== "undefined" && window.location.pathname.startsWith(path);
@@ -85,7 +64,7 @@ export default function TopNavFixed() {
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-[11px] font-bold">{email || "test@naver.com"} / {role}</p>
-            <p className="text-[10px] opacity-60">자동 로그아웃: {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,"0")}</p>
+            <p className="text-[10px] opacity-60">자동 로그아웃: 30:00</p>
           </div>
           <button type="button" onClick={handleLogout} className="bg-black text-white px-4 py-1.5 rounded-full text-[11px] font-bold hover:bg-black/80 cursor-pointer">로그아웃</button>
           <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[11px] font-bold">T</div>
