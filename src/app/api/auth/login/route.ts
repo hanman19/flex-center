@@ -1,10 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  const body = await req.json().catch(()=>({}));
-  const email = body.email || "user";
+export async function POST(req: NextRequest) {
+  const { email } = await req.json().catch(()=>({ email: "user" }));
+  
   const res = NextResponse.json({ ok: true });
-  res.cookies.set("flex-auth", email, { path: "/", maxAge: 86400 });
-  res.cookies.set("sb-qkpnvfmsmvcemdblaahl-auth-token", "logged", { path: "/", maxAge: 86400 });
+
+  // flex-auth 설정!
+  res.cookies.set({ name: "flex-auth", value: email || "user", maxAge: 86400, path: "/", sameSite: "lax" as const });
+
+  // logged_out 삭제!
+  res.cookies.set({ name: "logged_out", value: "", maxAge: 0, path: "/" });
+  res.cookies.set({ name: "logged_out", value: "", maxAge: 0, path: "/", domain: ".vercel.app" });
+  res.cookies.set({ name: "logged_out", value: "", expires: new Date(0), path: "/" });
+  res.cookies.delete("logged_out");
+
   return res;
+}
+
+export async function GET(req: NextRequest) {
+  return POST(req);
 }
