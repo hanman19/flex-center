@@ -6,25 +6,36 @@ import { useRouter } from "next/navigation";
 export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [debug, setDebug] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     const check = async () => {
       try {
-        // 서버에 진짜 쿠키 있는지 물어보기!
-        const res = await fetch("/api/auth/check", { cache: "no-store" });
+        const res = await fetch("/api/auth/check?t=" + Date.now(), { cache: "no-store" });
         const data = await res.json();
-        if (data.loggedIn) {
-          setIsLoggedIn(true);
+        setDebug(`api: ${JSON.stringify(data)} | localStorage flex-auth: ${!!localStorage.getItem("flex-auth")} | logged_out: ${!!localStorage.getItem("logged_out")} | doc cookie logged_out: ${document.cookie.includes("logged_out")}`);
+        
+        // 서버만 믿기! logged_out 있으면 무조건 로그아웃!
+        if (data.reason === "logged_out flag" || document.cookie.includes("logged_out") || localStorage.getItem("logged_out")) {
+          localStorage.clear();
+          sessionStorage.clear();
+          setIsLoggedIn(false);
         } else {
-          // 서버에 없으면 무조건 로그아웃! localStorage 무시!
+          setIsLoggedIn(data.loggedIn);
+          if (!data.loggedIn) {
+            localStorage.clear();
+          }
+        }
+      } catch (e) {
+        setDebug(`fetch 실패: ${e}`);
+        // fetch 실패해도 logged_out 있으면 로그아웃!
+        if (localStorage.getItem("logged_out") || document.cookie.includes("logged_out")) {
           localStorage.clear();
           setIsLoggedIn(false);
+        } else {
+          setIsLoggedIn(false);
         }
-      } catch {
-        // 서버 체크 실패하면 localStorage 보기
-        const hasFlex = !!localStorage.getItem("flex-auth");
-        setIsLoggedIn(hasFlex);
       }
       setLoading(false);
     };
@@ -32,8 +43,24 @@ export default function HomePage() {
   }, []);
 
   const goMember = () => {
+    // 로그아웃 플래그 있으면 무조건 로그인으로!
+    if (localStorage.getItem("logged_out") || document.cookie.includes("logged_out")) {
+      router.push("/login");
+      return;
+    }
     if (isLoggedIn) router.push("/dashboard");
     else router.push("/login");
+  };
+
+  const clearAll = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie.split(";").forEach(c => {
+      const name = c.split("=")[0].trim();
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    });
+    document.cookie = `logged_out=1; path=/; max-age=86400; SameSite=Lax`;
+    window.location.reload();
   };
 
   return (
@@ -59,11 +86,13 @@ export default function HomePage() {
             <div className="mt-6 flex gap-2">
               <Link href="/pricing" className="bg-black text-white px-6 py-3 rounded-full text-[13px]">요금제 보기 →</Link>
               <button onClick={goMember} className="bg-white border px-6 py-3 rounded-full text-[13px]">회원전용 입장</button>
+              <button onClick={clearAll} className="bg-red-50 border border-red-200 px-4 py-3 rounded-full text-[11px] text-red-600">강제 로그아웃</button>
             </div>
           </div>
           <div className="bg-white border rounded-[24px] p-6">
             <p className="font-bold">상태: {loading ? "확인중..." : isLoggedIn ? "로그인됨 - 대시보드 →" : "로그아웃됨 - 회원전용 → (정상!)"}</p>
-            <p className="text-[11px] opacity-60 mt-2">서버 쿠키 기준으로 판단! 로그아웃 후 "로그아웃됨"이면 성공!</p>
+            <p className="text-[10px] opacity-60 mt-2 break-all">디버그: {debug || "없음"}</p>
+            <p className="text-[11px] opacity-60 mt-2">서버 + localStorage + 쿠키 모두 체크! 강제 로그아웃 버튼 눌러봐!</p>
           </div>
         </div>
       </main>
