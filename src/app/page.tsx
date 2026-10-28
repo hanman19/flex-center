@@ -18,7 +18,7 @@ export default function Home() {
           <Link href="/" className="flex items-center gap-3">
             <div className="w-7 h-7 bg-black text-white flex items-center justify-center font-black rounded-full text-[12px]">F</div>
             <span className="font-semibold tracking-tight">FLEX CENTER</span>
-            <span className="ml-2 text-[10px] bg-black/5 px-2 py-1 rounded-full hidden md:inline">GIMPO · MICRO FULFILLMENT</span>
+            <span className="ml-2 text-[10px] bg-black/5 px-2 py-1 rounded-full hidden md:inline">BETA SERVICE</span>
           </Link>
           <div className="flex items-center gap-2">
             <Link href="#pricing" className="text-[13px] px-4 py-2 rounded-full border border-black/10 hover:bg-black hover:text-white transition">요금제</Link>
