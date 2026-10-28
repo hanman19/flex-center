@@ -1,53 +1,36 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 export async function POST() {
   const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options });
-        },
-      },
+  
+  // Supabase 관련 쿠키 다 지우기!
+  const allCookies = cookieStore.getAll();
+  for (const cookie of allCookies) {
+    if (cookie.name.includes("supabase") || cookie.name.includes("sb-") || cookie.name.includes("auth")) {
+      cookieStore.set(cookie.name, "", { maxAge: 0, path: "/" });
     }
-  );
+  }
 
-  await supabase.auth.signOut();
+  // 일반적인 쿠키도 지우기!
+  cookieStore.set("sb-access-token", "", { maxAge: 0, path: "/" });
+  cookieStore.set("sb-refresh-token", "", { maxAge: 0, path: "/" });
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, message: "로그아웃 - 쿠키 삭제!" });
 }
 
 export async function GET() {
   const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-        },
-      },
+  
+  const allCookies = cookieStore.getAll();
+  for (const cookie of allCookies) {
+    if (cookie.name.includes("supabase") || cookie.name.includes("sb-") || cookie.name.includes("auth")) {
+      cookieStore.set(cookie.name, "", { maxAge: 0, path: "/" });
     }
-  );
+  }
 
-  await supabase.auth.signOut();
+  cookieStore.set("sb-access-token", "", { maxAge: 0, path: "/" });
+  cookieStore.set("sb-refresh-token", "", { maxAge: 0, path: "/" });
 
-  return NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_SITE_URL || "https://flex-center.vercel.app"));
+  return NextResponse.redirect(new URL("/", "https://flex-center.vercel.app"));
 }
