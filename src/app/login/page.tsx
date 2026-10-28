@@ -12,8 +12,9 @@ function LoginInner() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // 로그아웃 플래그 있으면 정리
-    if (searchParams.get("logout") || localStorage.getItem("logged_out")) {
+    // 로그아웃 상태면 정리
+    const hasLoggedOut = document.cookie.includes("logged_out") || localStorage.getItem("logged_out");
+    if (hasLoggedOut || searchParams.get("logout")) {
       localStorage.removeItem("sb-qkpnvfmsmvcemdblaahl-auth-token");
       Object.keys(localStorage).forEach(k => {
         if (k.startsWith("sb-") || k.includes("supabase") || k === "flex-auth") {
@@ -32,11 +33,18 @@ function LoginInner() {
     setError("");
 
     try {
-      // 로그인하면 logged_out 플래그 삭제!
+      // logged_out 플래그 확실하게 삭제!
       localStorage.removeItem("logged_out");
       document.cookie = `logged_out=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      document.cookie = `logged_out=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax`;
       document.cookie = `logged_out=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.vercel.app`;
-      await fetch("/api/auth/clear-logout", { method: "POST" }).catch(()=>{});
+      document.cookie = `logged_out=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=flex-center.vercel.app`;
+      
+      // 서버에서도 삭제!
+      try {
+        await fetch("/api/auth/clear-logout", { method: "POST", credentials: "include", cache: "no-store" });
+        await fetch("/api/auth/clear-logout", { method: "GET", credentials: "include", cache: "no-store" });
+      } catch {}
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
@@ -45,11 +53,20 @@ function LoginInner() {
         return;
       }
       if (data.user) {
+        // 로그인 성공! logged_out 다시 한번 삭제!
+        localStorage.removeItem("logged_out");
+        document.cookie = `logged_out=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
         document.cookie = `flex-auth=${email}; path=/; max-age=86400; SameSite=Lax`;
         localStorage.setItem("flex-auth", email);
-        localStorage.removeItem("logged_out");
-        await fetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email }) }).catch(()=>{});
-        window.location.href = "/dashboard";
+        
+        try {
+          await fetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email }), credentials: "include" }).catch(()=>{});
+          await fetch("/api/auth/clear-logout", { method: "POST", credentials: "include" }).catch(()=>{});
+        } catch {}
+
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 500);
       }
     } catch (e: any) {
       setError(e.message || "로그인 실패");
