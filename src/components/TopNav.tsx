@@ -19,8 +19,10 @@ export default function TopNav() {
         if (user.email === "phankyu@gmail.com") {
           setRole("admin");
         } else {
-          const { data } = await supabase.from("seller_profiles").select("role").eq("email", user.email).single();
-          if (data?.role) setRole(data.role);
+          try {
+            const { data } = await supabase.from("seller_profiles").select("role").eq("email", user.email).single();
+            if (data?.role) setRole(data.role);
+          } catch {}
         }
       }
     };
@@ -53,8 +55,19 @@ export default function TopNav() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/";
+    console.log("로그아웃 클릭!");
+    try {
+      await supabase.auth.signOut();
+      localStorage.clear();
+      sessionStorage.clear();
+      console.log("로그아웃 완료! 이동!");
+      window.location.href = "/";
+    } catch (e) {
+      console.error("로그아웃 에러", e);
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = "/";
+    }
   };
 
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
@@ -101,7 +114,7 @@ export default function TopNav() {
             <p className="text-[11px] font-bold">{email || "test@naver.com"} / {role}</p>
             <p className="text-[10px] opacity-60">자동 로그아웃: {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,"0")} / 절대: 719:55</p>
           </div>
-          <button onClick={handleLogout} className="bg-black text-white px-4 py-1.5 rounded-full text-[11px] font-bold hover:bg-black/80">로그아웃</button>
+          <button type="button" onClick={handleLogout} className="bg-black text-white px-4 py-1.5 rounded-full text-[11px] font-bold hover:bg-black/80 cursor-pointer">로그아웃</button>
           <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[11px] font-bold">T</div>
         </div>
       </div>
