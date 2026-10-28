@@ -31,7 +31,7 @@ export default function TopNav() {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          supabase.auth.signOut().then(()=> router.push("/"));
+          supabase.auth.signOut().then(()=> { window.location.href = "/"; });
           return 0;
         }
         return prev - 1;
@@ -54,7 +54,7 @@ export default function TopNav() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/");
+    window.location.href = "/";
   };
 
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
@@ -62,7 +62,6 @@ export default function TopNav() {
   const menus = [
     { name: "대시보드", path: "/dashboard", pro: true },
     { name: "WMS Lite", path: "/wms-lite", pro: false },
-    { name: "WMS Pro", path: "/wms", pro: true, adminOnly: true },
     { name: "주문", path: "/orders", pro: false },
     { name: "정산", path: "/settlement", pro: true },
     { name: "입고", path: "/admin/inbound", pro: true, adminOnly: true },
@@ -93,7 +92,6 @@ export default function TopNav() {
               >
                 {menu.name}
                 {menu.new && <span className="bg-[#FFC61A] text-black border border-black px-1.5 py-0.5 rounded-full text-[8px]">NEW</span>}
-                {menu.pro && <span className="opacity-50 text-[9px]">Pro</span>}
               </Link>
             ))}
           </div>
@@ -103,7 +101,7 @@ export default function TopNav() {
             <p className="text-[11px] font-bold">{email || "test@naver.com"} / {role}</p>
             <p className="text-[10px] opacity-60">자동 로그아웃: {Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,"0")} / 절대: 719:55</p>
           </div>
-          <button onClick={handleLogout} className="bg-black text-white px-4 py-1.5 rounded-full text-[11px] font-bold">로그아웃</button>
+          <button onClick={handleLogout} className="bg-black text-white px-4 py-1.5 rounded-full text-[11px] font-bold hover:bg-black/80">로그아웃</button>
           <div className="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center text-[11px] font-bold">T</div>
         </div>
       </div>
