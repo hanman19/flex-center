@@ -37,7 +37,7 @@ export default function Home() {
                 MICRO FULFILLMENT CENTER · GIMPO
               </div>
               <h1 className="text-[38px] md:text-[64px] font-[800] tracking-[-0.04em] leading-[0.9] mt-6">
-                작은 브랜드를 위한<br/>
+                모든 셀러를 위한<br/>
                 <span className="opacity-20">큰 물류.</span>
               </h1>
               <p className="text-[16px] md:text-[18px] opacity-60 mt-6 max-w-[480px] leading-relaxed break-keep">
@@ -74,12 +74,11 @@ export default function Home() {
             <div className="md:col-span-5">
               <p className="text-[11px] tracking-widest opacity-30">ABOUT FLEX CENTER</p>
               <h2 className="text-[28px] md:text-[36px] font-bold tracking-tight leading-[0.95] mt-4 break-keep">
-                소규모 셀러를 위해<br/>만든 물류.
+                셀러의 편의만을 위해 만든<br/>만든 물류 플랫폼.
               </h2>
               <p className="text-[14px] opacity-60 mt-6 leading-relaxed break-keep">
-                대형 3PL은 월 1000건 이상만 받습니다.<br/>
                 우리는 월 10건부터 시작합니다.<br/>
-                작은 브랜드가 커질 때까지 함께합니다.
+                당신의 브랜드가 성공 할 때까지 함께합니다.
               </p>
             </div>
             <div className="md:col-span-7">
