@@ -27,3 +27,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     </html>
   );
 }
+import ChatWidget from "@/components/ChatWidget";
+// ... 기존 코드 ...
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <ChatWidget />  // 이 한 줄만 추가!
+      </body>
+    </html>
+  );
+}
