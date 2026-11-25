@@ -1,7 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    return {
+      beforeFiles: [
+        { source: "/", destination: "/flex-public-home.html" },
+        { source: "/join", destination: "/flex-join-preview.html" },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
